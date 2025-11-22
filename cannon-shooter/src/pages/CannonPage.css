@@ -1,0 +1,13 @@
+.cannon-page {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: radial-gradient(circle at 30% 20%, rgba(34, 197, 235, 0.1), transparent 25%),
+    radial-gradient(circle at 80% 10%, rgba(99, 102, 241, 0.12), transparent 30%),
+    #020617;
+}
+
+.cannon-page canvas {
+  display: block;
+}
