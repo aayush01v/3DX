@@ -1,13 +1,10 @@
-import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { createRef, forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { Color } from 'three'
 import { RigidBody } from '@react-three/rapier'
 import { PROJECTILE_POOL_SIZE, PROJECTILE_SPEED } from './utils/constants'
 
 const ProjectilePool = forwardRef(function ProjectilePool({ getMuzzleTransform }, ref) {
-  const bodies = useMemo(
-    () => Array.from({ length: PROJECTILE_POOL_SIZE }, () => useRef()),
-    [],
-  )
+  const bodies = useRef(Array.from({ length: PROJECTILE_POOL_SIZE }, () => createRef()))
   const [activeIndex, setActiveIndex] = useState(0)
   const projectileColor = useMemo(() => new Color('#f97316'), [])
 
@@ -17,7 +14,7 @@ const ProjectilePool = forwardRef(function ProjectilePool({ getMuzzleTransform }
       const muzzle = getMuzzleTransform()
       if (!muzzle) return
 
-      const bodyRef = bodies[activeIndex]?.current
+      const bodyRef = bodies.current[activeIndex]?.current
       if (!bodyRef) return
 
       bodyRef.setTranslation(
@@ -40,7 +37,7 @@ const ProjectilePool = forwardRef(function ProjectilePool({ getMuzzleTransform }
 
   return (
     <group>
-      {bodies.map((body, index) => (
+      {bodies.current.map((body, index) => (
         <RigidBody
           key={index}
           ref={body}

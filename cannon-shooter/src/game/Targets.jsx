@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { createRef, useEffect, useRef, useState } from 'react'
 import { RigidBody } from '@react-three/rapier'
 import { TARGET_FALL_LIMIT, TARGET_POSITIONS } from './utils/constants'
 
@@ -23,15 +23,12 @@ function TargetBlock({ position, bodyRef }) {
 }
 
 export default function Targets({ onTargetDown, resetToken }) {
-  const bodyRefs = useMemo(
-    () => TARGET_POSITIONS.map(() => ({ ref: useRef(), fallen: false })),
-    [],
-  )
+  const bodyRefs = useRef(TARGET_POSITIONS.map(() => ({ ref: createRef(), fallen: false })))
   const [resetCount, setResetCount] = useState(0)
 
   useEffect(() => {
     setResetCount((c) => c + 1)
-    bodyRefs.forEach((entry, index) => {
+    bodyRefs.current.forEach((entry, index) => {
       const body = entry.ref.current
       entry.fallen = false
       if (!body) return
@@ -45,7 +42,7 @@ export default function Targets({ onTargetDown, resetToken }) {
 
   useEffect(() => {
     const id = setInterval(() => {
-      bodyRefs.forEach((entry, index) => {
+      bodyRefs.current.forEach((entry, index) => {
         const body = entry.ref.current
         if (!body || entry.fallen) return
         const translation = body.translation()
@@ -61,7 +58,7 @@ export default function Targets({ onTargetDown, resetToken }) {
 
   return (
     <group key={resetCount}>
-      {bodyRefs.map((entry, index) => (
+      {bodyRefs.current.map((entry, index) => (
         <TargetBlock key={index} position={TARGET_POSITIONS[index]} bodyRef={entry.ref} />
       ))}
     </group>
