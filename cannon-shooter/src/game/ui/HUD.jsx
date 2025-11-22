@@ -1,14 +1,38 @@
 import './hud.css'
 
-export default function HUD({ yaw, pitch, score, shots, targets, onReset, onFire, aimHandlers }) {
+export default function HUD({
+  yaw,
+  pitch,
+  score,
+  shots,
+  targets,
+  accuracy,
+  status,
+  onReset,
+  onFire,
+  aimHandlers,
+}) {
   const degreesYaw = Math.round((yaw * 180) / Math.PI)
   const degreesPitch = Math.round((pitch * 180) / Math.PI)
+
+  const shouldIgnorePointer = (event) =>
+    event.target.closest('.hud__button, .chip') !== null
+
+  const handlePointerDown = (event) => {
+    if (shouldIgnorePointer(event)) return
+    aimHandlers.onPointerDown(event)
+  }
+
+  const handlePointerMove = (event) => {
+    if (shouldIgnorePointer(event)) return
+    aimHandlers.onPointerMove(event)
+  }
 
   return (
     <div
       className="hud"
-      onPointerDown={aimHandlers.onPointerDown}
-      onPointerMove={aimHandlers.onPointerMove}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
       onPointerUp={aimHandlers.onPointerUp}
       onPointerLeave={aimHandlers.onPointerLeave}
       onWheel={aimHandlers.onWheel}
@@ -34,7 +58,12 @@ export default function HUD({ yaw, pitch, score, shots, targets, onReset, onFire
           <p className="label">Shots</p>
           <p className="value">{shots}</p>
         </div>
+        <div className="hud__panel">
+          <p className="label">Accuracy</p>
+          <p className="value">{accuracy}</p>
+        </div>
       </div>
+      <div className="hud__status">{status}</div>
       <div className="hud__bottom">
         <button className="hud__button" onClick={onFire}>
           Fire
@@ -42,6 +71,12 @@ export default function HUD({ yaw, pitch, score, shots, targets, onReset, onFire
         <button className="hud__button ghost" onClick={onReset}>
           Reset
         </button>
+        <div className="hud__controls">
+          <span className="chip">Space</span>
+          <span className="chip">R</span>
+          <span className="chip">Scroll</span>
+          <span className="chip">Drag</span>
+        </div>
       </div>
       <div className="hud__crosshair" />
     </div>
