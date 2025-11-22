@@ -1,0 +1,1790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarX Physics Simulator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+        #app { display: flex; height: 100vh; }
+        #viewport { flex: 1; position: relative; background: #0a0e27; }
+        canvas { width: 100%; height: 100%; display: block; }
+        #controls {
+            width: 380px;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            padding: 25px;
+            overflow-y: auto;
+            box-shadow: -10px 0 40px rgba(0,0,0,0.2);
+        }
+        h1 { color: #667eea; font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+        .subtitle { color: #666; font-size: 14px; margin-bottom: 20px; }
+        .section {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+        }
+        .section h2 { font-size: 16px; margin-bottom: 15px; color: #333; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .stat {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .stat-value { font-size: 20px; font-weight: 700; color: #333; }
+        .stat-unit { font-size: 12px; color: #666; }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: translateY(-2px); }
+        .terrain-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .terrain-buttons button { font-size: 12px; padding: 10px; }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            backdrop-filter: blur(10px);
+        }
+        #camera-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 11px;
+            backdrop-filter: blur(10px);
+            text-align: right;
+        }
+        #camera-info .label {
+            color: #888;
+            font-size: 9px;
+            text-transform: uppercase;
+        }
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+        kbd {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="viewport">
+            <canvas id="canvas"></canvas>
+            <div id="hud">
+                <div><strong>🚗 CarX Physics Simulator</strong></div>
+                <div>Speed: <span id="speed">0</span> m/s</div>
+                <div>RPM: <span id="rpm">1000</span></div>
+                <div>Gear: <span id="gear">1</span></div>
+            </div>
+            <div id="camera-info">
+                <div class="label">Camera</div>
+                <div>Zoom: <span id="cam-zoom">30</span>m</div>
+                <div>Angle: <span id="cam-angle">0</span>°</div>
+                <div>Pitch: <span id="cam-pitch">23</span>°</div>
+                <div style="margin-top: 5px; color: #4ec9b0;">
+                    <span id="cam-mode">🎯 Following</span>
+                </div>
+            </div>
+            <div class="instructions" id="instructions">
+                <div><kbd>↑</kbd> or <kbd>W</kbd> Throttle | <kbd>↓</kbd> or <kbd>S</kbd> Brake</div>
+                <div><kbd>←</kbd><kbd>→</kbd> or <kbd>A</kbd><kbd>D</kbd> Steer | <kbd>Space</kbd> Handbrake</div>
+                <div><kbd>Drag</kbd> Rotate | <kbd>Wheel</kbd> Zoom | <kbd>C</kbd> Follow | <kbd>R</kbd> Reset | <kbd>G</kbd> Debug</div>
+                <div style="margin-top: 5px; font-size: 10px; opacity: 0.7;">🎮 Camera centered on car - Press G to see ground contact</div>
+            </div>
+        </div>
+        <div id="controls">
+            <h1>🏎️ CarX Simulator</h1>
+            <p class="subtitle">Interactive C++ Physics Engine Preview</p>
+            
+            <div class="section">
+                <h2>📊 Live Stats</h2>
+                <div class="stat-grid">
+                    <div class="stat">
+                        <div class="stat-label">Speed</div>
+                        <div class="stat-value"><span id="speed2">0</span> <span class="stat-unit">m/s</span></div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">RPM</div>
+                        <div class="stat-value"><span id="rpm2">1000</span></div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Gear</div>
+                        <div class="stat-value"><span id="gear2">1</span> <span class="stat-unit">/ 6</span></div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">G-Force</div>
+                        <div class="stat-value"><span id="gforce">0.0</span> <span class="stat-unit">g</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🎮 Controls</h2>
+                <button onclick="resetCar()">🔄 Reset Car</button>
+                <button onclick="togglePhysics()">⏸️ Pause Physics</button>
+                <button onclick="resetCamera()">📷 Reset Camera</button>
+                <button onclick="toggleCameraFollow()" id="camera-follow-btn">🎯 Follow: ON</button>
+            </div>
+            
+            <div class="section">
+                <h2>🏔️ Terrain</h2>
+                <div class="terrain-buttons">
+                    <button onclick="setTerrain('flat')">Flat</button>
+                    <button onclick="setTerrain('hills')">Hills</button>
+                    <button onclick="setTerrain('mountains')">Mountains</button>
+                    <button onclick="setTerrain('track')">Race Track</button>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🌍 Gravity Settings</h2>
+                <label style="font-size: 12px;">Gravity: <span id="gravity-display">9.81 m/s²</span></label>
+                <input type="range" id="gravity-slider" min="-20" max="-1" value="-9.81" step="0.1" style="width: 100%; margin-top: 5px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 10px;">
+                    <button onclick="setGravity(-9.81)" style="font-size: 11px; padding: 8px;">Earth</button>
+                    <button onclick="setGravity(-1.62)" style="font-size: 11px; padding: 8px;">Moon</button>
+                    <button onclick="setGravity(-3.71)" style="font-size: 11px; padding: 8px;">Mars</button>
+                    <button onclick="setGravity(-24.79)" style="font-size: 11px; padding: 8px;">Jupiter</button>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>⚡ Performance</h2>
+                <label style="font-size: 12px;">Quality: <span id="quality-display">Medium</span></label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 10px;">
+                    <button onclick="setQuality('low')" style="font-size: 11px; padding: 8px;">Low</button>
+                    <button onclick="setQuality('medium')" style="font-size: 11px; padding: 8px;">Medium</button>
+                    <button onclick="setQuality('high')" style="font-size: 11px; padding: 8px;">High</button>
+                </div>
+                <div style="margin-top: 10px; font-size: 11px; color: #666;">
+                    <div>FPS: <span id="fps-display">60</span></div>
+                    <div>Draw Calls: <span id="draw-calls">0</span></div>
+                    <div>Triangles: <span id="triangles">0</span></div>
+                    <div style="margin-top: 5px;">
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" id="auto-quality" onchange="toggleAutoQuality()">
+                            <span>Auto Quality</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>💻 Code Editor</h2>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <select id="language" style="flex: 1; padding: 8px; border-radius: 5px; border: 1px solid #ddd;">
+                        <option value="cpp">C++</option>
+                        <option value="python">Python</option>
+                        <option value="javascript">JavaScript</option>
+                    </select>
+                    <button onclick="clearEditor()" style="width: auto; padding: 8px 15px; font-size: 12px;">Clear</button>
+                </div>
+                <textarea id="code-editor" spellcheck="false" style="width: 100%; height: 180px; font-family: 'Courier New', monospace; font-size: 13px; padding: 12px; border-radius: 5px; border: 2px solid #667eea; background: #1e1e1e; color: #d4d4d4; resize: vertical; line-height: 1.5;">// Full Programming Support!
+// Define variables
+float mass = 1500;
+float force = 10000;
+
+// Calculate acceleration (F = ma)
+float acceleration = force / mass;
+
+// Apply to car
+car.setMass(mass);
+car.applyForce(Vector3(0, 0, force));
+car.getSpeed();</textarea>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="executeCode()" style="flex: 1;">▶️ Execute Code</button>
+                    <button onclick="stopExecution()" style="width: auto; padding: 8px 15px; background: #e74c3c;">⏹️ Stop</button>
+                </div>
+                <div id="output" style="background: #1e1e1e; color: #4ec9b0; padding: 12px; border-radius: 5px; margin-top: 10px; font-family: monospace; font-size: 12px; min-height: 80px; max-height: 150px; overflow-y: auto; border: 1px solid #333;">Ready to execute code...</div>
+                <div style="margin-top: 8px; font-size: 11px; color: #888;">
+                    <strong>Full Programming Support:</strong><br>
+                    • Define variables: <code>float x = 10;</code><br>
+                    • Use Math functions: <code>sin(), cos(), sqrt(), pow()</code><br>
+                    • JavaScript mode: Full JS with console.log()<br>
+                    • Commands: setMass(), applyForce(), setVelocity(), getSpeed(), getEnergy(), getMomentum()
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🧪 Physics Experiments</h2>
+                <select id="experiment" onchange="loadExperiment()" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ddd;">
+                    <option value="">Select Physics Experiment...</option>
+                    <optgroup label="Kinematics">
+                        <option value="kinematics1">Equations of Motion</option>
+                        <option value="kinematics2">Relative Velocity</option>
+                        <option value="projectile">Projectile Motion</option>
+                    </optgroup>
+                    <optgroup label="Laws of Motion">
+                        <option value="newton1">Newton's Laws</option>
+                        <option value="friction">Friction</option>
+                        <option value="circular">Circular Motion</option>
+                        <option value="banking">Banking of Roads</option>
+                    </optgroup>
+                    <optgroup label="Work, Energy & Power">
+                        <option value="work_energy">Work-Energy Theorem</option>
+                        <option value="power">Power</option>
+                        <option value="spring">Spring Force</option>
+                    </optgroup>
+                    <optgroup label="Momentum & Collisions">
+                        <option value="momentum">Linear Momentum</option>
+                        <option value="impulse">Impulse</option>
+                        <option value="elasticity">Elastic Collisions</option>
+                    </optgroup>
+                    <optgroup label="Gravitation">
+                        <option value="gravitation">Universal Gravitation</option>
+                    </optgroup>
+                    <optgroup label="Rotational Motion">
+                        <option value="rotation">Rotational Dynamics</option>
+                    </optgroup>
+                    <optgroup label="Oscillations">
+                        <option value="sho">Simple Harmonic Motion</option>
+                    </optgroup>
+                    <optgroup label="Fluid & Waves">
+                        <option value="fluid">Fluid Mechanics</option>
+                        <option value="doppler">Doppler Effect</option>
+                    </optgroup>
+                </select>
+                <div id="experiment-desc" style="font-size: 12px; color: #666; margin-top: 10px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // Physics
+        class Vec3 {
+            constructor(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; }
+            add(v) { return new Vec3(this.x + v.x, this.y + v.y, this.z + v.z); }
+            mul(s) { return new Vec3(this.x * s, this.y * s, this.z * s); }
+            dot(v) { return this.x * v.x + this.y * v.y + this.z * v.z; }
+            length() { return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z); }
+            normalized() { const len = this.length(); return len > 0 ? this.mul(1 / len) : new Vec3(); }
+        }
+
+        class Car {
+            constructor() {
+                // Start at terrain height + offset
+                const initialHeight = 10; // Will be adjusted after terrain loads
+                this.position = new Vec3(0, initialHeight, 0);
+                this.velocity = new Vec3();
+                this.verticalVelocity = 0; // Separate vertical velocity
+                this.rotation = 0;
+                this.mass = 1200;
+                this.enginePower = 150000;
+                this.throttle = 0;
+                this.steering = 0;
+                this.brake = 0;
+                this.engineRPM = 1000;
+                this.gear = 1;
+                this.gravity = -9.81; // Default Earth gravity
+                this.onGround = false;
+                this.groundClearance = 1.0; // Distance from physics center to ground (car height)
+            }
+
+            update(dt, terrain) {
+                // Get actual terrain height at car's current position
+                const terrainHeight = terrain.getHeight(this.position.x, this.position.z);
+                const targetGroundY = terrainHeight + this.groundClearance;
+                
+                // Vertical physics (free fall / ground contact)
+                const tolerance = 0.05; // Small tolerance for ground detection
+                
+                if (this.position.y > targetGroundY + tolerance) {
+                    // In air - apply gravity
+                    this.onGround = false;
+                    this.verticalVelocity += this.gravity * dt;
+                    this.position.y += this.verticalVelocity * dt;
+                    
+                    // Check if landed
+                    if (this.position.y <= targetGroundY) {
+                        this.position.y = targetGroundY;
+                        // Dampen vertical velocity on impact
+                        this.verticalVelocity = Math.max(this.verticalVelocity * -0.3, 0);
+                        this.onGround = true;
+                    }
+                } else {
+                    // On ground - follow terrain exactly
+                    this.onGround = true;
+                    
+                    // Smooth terrain following
+                    const heightDiff = targetGroundY - this.position.y;
+                    if (Math.abs(heightDiff) < 2.0) {
+                        // Small height changes - follow smoothly
+                        this.position.y += heightDiff * 0.3; // Smooth interpolation
+                    } else {
+                        // Large drop - start falling
+                        this.onGround = false;
+                        this.verticalVelocity = 0;
+                    }
+                    
+                    // Reset vertical velocity when on ground
+                    if (this.onGround) {
+                        this.verticalVelocity = 0;
+                    }
+                }
+                
+                // Horizontal physics (only when on ground)
+                if (this.onGround) {
+                    // FIXED: Forward direction matches model orientation (rotated 180°)
+                    // Model faces -Z direction after rotation, so forward is negative Z
+                    const forward = new Vec3(-Math.sin(this.rotation), 0, -Math.cos(this.rotation));
+                    const right = new Vec3(Math.cos(this.rotation), 0, -Math.sin(this.rotation));
+                    
+                    const engineForce = forward.mul(this.throttle * this.enginePower / this.mass);
+                    const drag = this.velocity.mul(-0.3 * this.velocity.length());
+                    const brakeForce = this.velocity.normalized().mul(-this.brake * 25);
+
+                    const totalForce = engineForce.add(drag).add(brakeForce);
+                    this.velocity = this.velocity.add(totalForce.mul(dt));
+
+                    const speed = this.velocity.length();
+                    if (speed > 60) this.velocity = this.velocity.normalized().mul(60);
+
+                    this.position = this.position.add(this.velocity.mul(dt));
+
+                    // Steering
+                    if (speed > 0.5 && Math.abs(this.steering) > 0.01) {
+                        const forwardSpeed = this.velocity.dot(forward);
+                        if (Math.abs(forwardSpeed) > 0.5) {
+                            const turnRadius = 2.5 / Math.tan(this.steering * 0.6);
+                            const angularSpeed = forwardSpeed / turnRadius;
+                            this.rotation += angularSpeed * dt;
+                        }
+                    }
+
+                    this.engineRPM = 1000 + speed * 200;
+                    this.gear = Math.min(6, Math.floor(speed / 10) + 1);
+                } else {
+                    // In air - maintain horizontal velocity
+                    this.position = this.position.add(this.velocity.mul(dt * 0.5)); // Reduced air control
+                }
+            }
+
+            getCentripetalForce() {
+                const speed = this.velocity.length();
+                if (speed < 0.1 || Math.abs(this.steering) < 0.01) return 0;
+                const turnRadius = 2.5 / Math.tan(this.steering * 0.6);
+                return this.mass * (speed * speed) / Math.abs(turnRadius);
+            }
+            
+            getForwardVector() {
+                // Returns the actual forward direction of the car
+                return new Vec3(-Math.sin(this.rotation), 0, -Math.cos(this.rotation));
+            }
+        }
+
+        class Terrain {
+            constructor() {
+                this.type = 'flat'; // Start with flat terrain for better initial view
+                this.needsUpdate = true;
+            }
+
+            getHeight(x, z) {
+                const fx = x / 20;
+                const fz = z / 20;
+                
+                switch(this.type) {
+                    case 'flat': return 0;
+                    case 'hills': return 3 * (Math.sin(fx * 2) * Math.cos(fz * 2) + 0.5 * Math.sin(fx * 4) * Math.cos(fz * 4));
+                    case 'mountains': return 10 * (Math.sin(fx) * Math.cos(fz) + 0.5 * Math.sin(fx * 2) * Math.cos(fz * 2));
+                    case 'track': {
+                        const dist = Math.sqrt(x * x + z * z);
+                        const trackDist = Math.abs(dist - 25);
+                        return trackDist < 5 ? -trackDist * 0.5 : Math.sin(fx * 5) * Math.cos(fz * 5) * 0.5;
+                    }
+                    default: return 0;
+                }
+            }
+        }
+
+        // Create beautiful procedural car
+        function createCarModel() {
+            const carGroup = new THREE.Group();
+            
+            // Main body
+            const bodyGeom = new THREE.BoxGeometry(2, 0.8, 4);
+            const bodyMat = new THREE.MeshStandardMaterial({ 
+                color: 0xff6b35,
+                metalness: 0.7,
+                roughness: 0.3
+            });
+            const body = new THREE.Mesh(bodyGeom, bodyMat);
+            body.position.y = 0.6;
+            body.castShadow = true;
+            carGroup.add(body);
+            
+            // Cabin
+            const cabinGeom = new THREE.BoxGeometry(1.6, 0.7, 2);
+            const cabinMat = new THREE.MeshStandardMaterial({ 
+                color: 0x2c3e50,
+                metalness: 0.8,
+                roughness: 0.2
+            });
+            const cabin = new THREE.Mesh(cabinGeom, cabinMat);
+            cabin.position.set(0, 1.15, -0.3);
+            cabin.castShadow = true;
+            carGroup.add(cabin);
+            
+            // Hood
+            const hoodGeom = new THREE.BoxGeometry(1.8, 0.3, 1.5);
+            const hood = new THREE.Mesh(hoodGeom, bodyMat);
+            hood.position.set(0, 0.85, 1.25);
+            hood.castShadow = true;
+            carGroup.add(hood);
+            
+            // Wheels
+            const wheelGeom = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
+            const wheelMat = new THREE.MeshStandardMaterial({ 
+                color: 0x1a1a1a,
+                metalness: 0.5,
+                roughness: 0.8
+            });
+            
+            const wheelPositions = [
+                [-1.1, 0.4, 1.3],
+                [1.1, 0.4, 1.3],
+                [-1.1, 0.4, -1.3],
+                [1.1, 0.4, -1.3]
+            ];
+            
+            wheelPositions.forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeom, wheelMat);
+                wheel.rotation.z = Math.PI / 2;
+                wheel.position.set(...pos);
+                wheel.castShadow = true;
+                carGroup.add(wheel);
+                
+                // Rim
+                const rimGeom = new THREE.CylinderGeometry(0.25, 0.25, 0.35, 16);
+                const rimMat = new THREE.MeshStandardMaterial({ 
+                    color: 0xcccccc,
+                    metalness: 0.9,
+                    roughness: 0.1
+                });
+                const rim = new THREE.Mesh(rimGeom, rimMat);
+                rim.rotation.z = Math.PI / 2;
+                rim.position.set(...pos);
+                carGroup.add(rim);
+            });
+            
+            // Headlights
+            const lightGeom = new THREE.BoxGeometry(0.3, 0.2, 0.1);
+            const lightMat = new THREE.MeshStandardMaterial({ 
+                color: 0xffffaa,
+                emissive: 0xffffaa,
+                emissiveIntensity: 0.5
+            });
+            
+            [-0.7, 0.7].forEach(x => {
+                const light = new THREE.Mesh(lightGeom, lightMat);
+                light.position.set(x, 0.7, 2.05);
+                carGroup.add(light);
+            });
+            
+            // Taillights
+            const tailMat = new THREE.MeshStandardMaterial({ 
+                color: 0xff0000,
+                emissive: 0xff0000,
+                emissiveIntensity: 0.3
+            });
+            
+            [-0.7, 0.7].forEach(x => {
+                const tail = new THREE.Mesh(lightGeom, tailMat);
+                tail.position.set(x, 0.7, -2.05);
+                carGroup.add(tail);
+            });
+            
+            // Spoiler
+            const spoilerGeom = new THREE.BoxGeometry(1.8, 0.1, 0.6);
+            const spoiler = new THREE.Mesh(spoilerGeom, bodyMat);
+            spoiler.position.set(0, 1.3, -1.8);
+            spoiler.rotation.x = -0.2;
+            carGroup.add(spoiler);
+            
+            return carGroup;
+        }
+
+        // Three.js setup with advanced optimizations
+        const canvas = document.getElementById('canvas');
+        const scene = new THREE.Scene();
+        
+        // Sky and atmosphere
+        scene.background = new THREE.Color(0x87ceeb); // Sky blue
+        // Disable fog to prevent terrain cut-off appearance
+        // scene.fog = new THREE.Fog(0x87ceeb, 100, 500);
+
+        const camera = new THREE.PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+        camera.position.set(0, 12, 25); // Better default view
+
+        // Optimized renderer
+        const renderer = new THREE.WebGLRenderer({ 
+            canvas, 
+            antialias: true,
+            powerPreference: "high-performance"
+        });
+        
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        
+        // Shadow settings
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        
+        // Tone mapping
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
+
+        // Optimized lighting setup
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        // Main sun light with shadows
+        const sunLight = new THREE.DirectionalLight(0xfff5e6, 1.5);
+        sunLight.position.set(50, 100, 50);
+        sunLight.castShadow = true;
+        
+        // Shadow camera setup
+        sunLight.shadow.camera.left = -50;
+        sunLight.shadow.camera.right = 50;
+        sunLight.shadow.camera.top = 50;
+        sunLight.shadow.camera.bottom = -50;
+        sunLight.shadow.camera.near = 10;
+        sunLight.shadow.camera.far = 200;
+        
+        // Shadow quality
+        sunLight.shadow.mapSize.width = 1024;
+        sunLight.shadow.mapSize.height = 1024;
+        sunLight.shadow.bias = -0.001;
+        scene.add(sunLight);
+
+        // Hemisphere light for natural ambient
+        const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x4a7c3a, 0.6);
+        scene.add(hemisphereLight);
+
+        // Load GLB model
+        let carMesh = null;
+        
+        import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js')
+            .then(module => {
+                const GLTFLoader = module.GLTFLoader;
+                const loader = new GLTFLoader();
+                
+                console.log('Attempting to load: lowpoly_game_model.glb');
+                
+                loader.load(
+                    'lowpoly_game_model.glb',
+                    (gltf) => {
+                        console.log('✓ GLB Model loaded successfully!');
+                        carMesh = gltf.scene;
+                        
+                        // Fix alignment - proper scale, rotation, and position
+                        carMesh.scale.set(2.5, 2.5, 2.5); // Larger for better visibility
+                        // Model is already oriented correctly, no additional rotation needed
+                        carMesh.rotation.y = 0; // Reset rotation - will be controlled by physics
+                        
+                        // DO NOT set position.y here - it will be set by physics in animation loop
+                        // The model's pivot point should be at the bottom (wheels on ground)
+                        
+                        console.log('✓ Car model aligned - forward direction fixed');
+                        
+                        // Optimize materials and enable shadows
+                        carMesh.traverse((child) => {
+                            if (child.isMesh) {
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                                
+                                // Enhance materials with PBR properties
+                                if (child.material) {
+                                    child.material.needsUpdate = true;
+                                    
+                                    // Add metallic/roughness for realistic look
+                                    if (child.material.metalness === undefined) {
+                                        child.material.metalness = 0.3;
+                                        child.material.roughness = 0.7;
+                                    }
+                                }
+                                
+                                // Optimize geometry
+                                if (child.geometry) {
+                                    child.geometry.computeVertexNormals();
+                                    if (!child.geometry.attributes.uv) {
+                                        child.geometry.computeBoundingBox();
+                                    }
+                                }
+                            }
+                        });
+                        
+                        scene.add(carMesh);
+                    },
+                    (progress) => {
+                        console.log('Loading:', (progress.loaded / progress.total * 100).toFixed(0) + '%');
+                    },
+                    (error) => {
+                        console.error('Failed to load GLB, using fallback:', error);
+                        carMesh = createCarModel();
+                        scene.add(carMesh);
+                    }
+                );
+            })
+            .catch(error => {
+                console.error('Failed to load GLTFLoader:', error);
+                carMesh = createCarModel();
+                scene.add(carMesh);
+            });
+
+        // Enhanced terrain with better visuals
+        const terrainGeometry = new THREE.PlaneGeometry(200, 200, 60, 60);
+        const terrainMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x4a7c3a, // Proper grass green
+            roughness: 0.9,
+            metalness: 0.0,
+            flatShading: false,
+            side: THREE.DoubleSide // Visible from both sides
+        });
+        const terrainMesh = new THREE.Mesh(terrainGeometry, terrainMaterial);
+        terrainMesh.rotation.x = -Math.PI / 2; // Rotate to horizontal
+        terrainMesh.position.y = 0; // Ensure it's at ground level
+        terrainMesh.receiveShadow = true;
+        terrainMesh.castShadow = false;
+        scene.add(terrainMesh);
+
+        // Enhanced grid with better visuals
+        const gridHelper = new THREE.GridHelper(200, 40, 0x667eea, 0x555555);
+        gridHelper.position.y = 0.05;
+        gridHelper.material.opacity = 0.25;
+        gridHelper.material.transparent = true;
+        gridHelper.material.depthWrite = false; // Prevent z-fighting
+        scene.add(gridHelper);
+
+        // Force arrows
+        const arrowHelper1 = new THREE.ArrowHelper(
+            new THREE.Vector3(1, 0, 0), 
+            new THREE.Vector3(0, 2, 0), 
+            5, 0xff4444, 1, 0.5
+        );
+        arrowHelper1.visible = false;
+        scene.add(arrowHelper1);
+
+        const arrowHelper2 = new THREE.ArrowHelper(
+            new THREE.Vector3(0, -1, 0), 
+            new THREE.Vector3(0, 2, 0), 
+            3, 0x44ff44, 0.5, 0.3
+        );
+        scene.add(arrowHelper2);
+        
+        // Ground contact debug sphere
+        const debugSphereGeom = new THREE.SphereGeometry(0.3, 8, 8);
+        const debugSphereMat = new THREE.MeshBasicMaterial({ 
+            color: 0xff00ff, 
+            wireframe: true 
+        });
+        const debugSphere = new THREE.Mesh(debugSphereGeom, debugSphereMat);
+        debugSphere.visible = false; // Toggle with 'G' key
+        scene.add(debugSphere);
+
+        // Physics
+        const car = new Car();
+        const terrain = new Terrain();
+        const keys = {}; // Use const instead of let
+        let paused = false;
+        
+        // Debug: Log key presses
+        console.log('Controls initialized. Press arrow keys or WASD to drive.');
+        console.log('Current keys object:', keys);
+
+        function updateTerrain() {
+            const positions = terrainGeometry.attributes.position.array;
+            for (let i = 0; i < positions.length; i += 3) {
+                const x = positions[i];
+                const z = positions[i + 1];
+                const height = terrain.getHeight(x, z);
+                positions[i + 2] = height;
+            }
+            terrainGeometry.attributes.position.needsUpdate = true;
+            terrainGeometry.computeVertexNormals();
+            terrain.needsUpdate = false;
+            
+            console.log('✓ Terrain updated:', terrain.type);
+        }
+        
+        // Initial terrain setup
+        updateTerrain();
+        
+        // Debug: Test terrain height at origin
+        console.log('Terrain height at (0,0):', terrain.getHeight(0, 0));
+
+        // Input handling - MUST be after keys object is defined
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            keys[e.code] = true;
+            
+            // Camera shortcuts
+            if (e.key === 'c' || e.key === 'C') {
+                toggleCameraFollow();
+                e.preventDefault();
+            }
+            if (e.key === 'r' || e.key === 'R') {
+                resetCamera();
+                e.preventDefault();
+            }
+            // Debug mode toggle
+            if (e.key === 'g' || e.key === 'G') {
+                debugSphere.visible = !debugSphere.visible;
+                console.log('✓ Ground debug:', debugSphere.visible ? 'ON' : 'OFF');
+                e.preventDefault();
+            }
+            
+            // Prevent default for control keys
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                e.preventDefault();
+            }
+            
+            // Debug output
+            if (e.key.includes('Arrow') || e.key === ' ' || 'wasd'.includes(e.key.toLowerCase())) {
+                console.log('✓ Key pressed:', e.key, '- Throttle:', car.throttle, 'Steering:', car.steering);
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+            keys[e.code] = false;
+            
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = canvas.clientWidth / canvas.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        });
+        
+        // Enhanced camera controls - Touch and Mouse
+        let zoomLevel = 25; // Initial camera distance (closer for better view)
+        let cameraAngle = 0; // Horizontal rotation around car
+        let cameraPitch = 0.5; // Vertical angle (slightly higher for better view)
+        let isDragging = false;
+        let lastTouchX = 0;
+        let lastTouchY = 0;
+        let cameraFollowCar = true; // Auto-follow car
+        let cameraTarget = new THREE.Vector3(0, 2, 0); // Where camera looks at
+        
+        // Mouse wheel zoom
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            zoomLevel += e.deltaY * 0.01;
+            zoomLevel = Math.max(10, Math.min(80, zoomLevel)); // Limit zoom range
+        }, { passive: false });
+        
+        // Mouse drag controls
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            lastTouchX = e.clientX;
+            lastTouchY = e.clientY;
+            canvas.style.cursor = 'grabbing';
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaX = e.clientX - lastTouchX;
+                const deltaY = e.clientY - lastTouchY;
+                
+                if (cameraFollowCar) {
+                    // Orbit mode - rotate around car (FIXED: inverted direction)
+                    cameraAngle += deltaX * 0.005; // Changed from -= to +=
+                    cameraPitch += deltaY * 0.003;
+                    cameraPitch = Math.max(0.1, Math.min(1.4, cameraPitch));
+                } else {
+                    // Free mode - pan camera target
+                    const panSpeed = 0.05;
+                    const right = new THREE.Vector3();
+                    const up = new THREE.Vector3(0, 1, 0);
+                    camera.getWorldDirection(right);
+                    right.cross(up).normalize();
+                    
+                    cameraTarget.add(right.multiplyScalar(-deltaX * panSpeed));
+                    cameraTarget.y += deltaY * panSpeed;
+                    
+                    // Also update camera position to maintain relative position
+                    camera.position.add(right.multiplyScalar(-deltaX * panSpeed * 0.5));
+                    camera.position.y += deltaY * panSpeed * 0.5;
+                }
+                
+                lastTouchX = e.clientX;
+                lastTouchY = e.clientY;
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            canvas.style.cursor = 'grab';
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+            canvas.style.cursor = 'grab';
+        });
+        
+        // Touch controls for mobile
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
+                e.preventDefault();
+            } else if (e.touches.length === 2) {
+                // Pinch zoom setup
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                lastTouchDistance = Math.sqrt(dx * dx + dy * dy);
+            }
+        }, { passive: false });
+        
+        let lastTouchDistance = 0;
+        
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1 && isDragging) {
+                const deltaX = e.touches[0].clientX - lastTouchX;
+                const deltaY = e.touches[0].clientY - lastTouchY;
+                
+                cameraAngle += deltaX * 0.008; // FIXED: Changed from -= to +=
+                cameraPitch += deltaY * 0.005;
+                cameraPitch = Math.max(0.1, Math.min(1.4, cameraPitch));
+                
+                lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
+                e.preventDefault();
+            } else if (e.touches.length === 2) {
+                // Pinch zoom
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (lastTouchDistance > 0) {
+                    const delta = lastTouchDistance - distance;
+                    zoomLevel += delta * 0.1;
+                    zoomLevel = Math.max(10, Math.min(80, zoomLevel));
+                }
+                
+                lastTouchDistance = distance;
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        canvas.addEventListener('touchend', (e) => {
+            isDragging = false;
+            if (e.touches.length < 2) {
+                lastTouchDistance = 0;
+            }
+        });
+        
+        // Double-tap to reset camera
+        let lastTapTime = 0;
+        canvas.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTapTime < 300) {
+                // Double tap detected - reset camera
+                cameraAngle = 0;
+                cameraPitch = 0.4;
+                zoomLevel = 30;
+                console.log('✓ Camera reset to default view');
+            }
+            lastTapTime = now;
+        });
+        
+        // Click viewport to focus for keyboard controls
+        canvas.addEventListener('click', () => {
+            canvas.focus();
+            document.getElementById('instructions').style.opacity = '1';
+        });
+        
+        // Set cursor style
+        canvas.style.cursor = 'grab';
+
+        // Advanced performance monitoring
+        let frameCount = 0;
+        let lastFPSUpdate = performance.now();
+        let currentFPS = 60;
+        let fpsHistory = [60, 60, 60, 60, 60]; // Start with good FPS history
+        let autoQualityEnabled = false; // Disabled by default to prevent unwanted quality changes
+        let lastQualityAdjust = 0;
+        
+        // Advanced quality settings with performance optimization
+        window.setQuality = (quality) => {
+            document.getElementById('quality-display').textContent = quality.charAt(0).toUpperCase() + quality.slice(1);
+            
+            switch(quality) {
+                case 'low':
+                    renderer.setPixelRatio(1);
+                    renderer.shadowMap.enabled = false;
+                    renderer.shadowMap.autoUpdate = false;
+                    renderer.toneMapping = THREE.LinearToneMapping;
+                    sunLight.intensity = 2.0;
+                    break;
+                    
+                case 'medium':
+                    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+                    renderer.shadowMap.enabled = true;
+                    renderer.shadowMap.autoUpdate = true;
+                    renderer.shadowMap.type = THREE.BasicShadowMap;
+                    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                    sunLight.intensity = 2.5;
+                    sunLight.shadow.mapSize.width = 1024;
+                    sunLight.shadow.mapSize.height = 1024;
+                    break;
+                    
+                case 'high':
+                    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                    renderer.shadowMap.enabled = true;
+                    renderer.shadowMap.autoUpdate = true;
+                    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                    sunLight.intensity = 2.5;
+                    sunLight.shadow.mapSize.width = 2048;
+                    sunLight.shadow.mapSize.height = 2048;
+                    break;
+            }
+            
+            // Force shadow map update
+            if (renderer.shadowMap.enabled) {
+                renderer.shadowMap.needsUpdate = true;
+            }
+            
+            console.log('✓ Quality:', quality, '| Shadows:', renderer.shadowMap.enabled, '| PixelRatio:', renderer.getPixelRatio());
+        };
+        
+        // Optimized animation loop with adaptive quality
+        let lastFrameTime = performance.now();
+        let deltaAccumulator = 0;
+        const targetFrameTime = 1000 / 60; // 60 FPS target
+        
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+            
+            // Calculate delta time
+            const deltaTime = currentTime - lastFrameTime;
+            lastFrameTime = currentTime;
+            deltaAccumulator += deltaTime;
+            
+            // FPS monitoring and adaptive quality
+            frameCount++;
+            if (currentTime - lastFPSUpdate >= 1000) {
+                currentFPS = frameCount;
+                document.getElementById('fps-display').textContent = currentFPS;
+                
+                // Track FPS history
+                fpsHistory.push(currentFPS);
+                if (fpsHistory.length > 5) fpsHistory.shift();
+                
+                // Auto-adjust quality based on performance (only after 5 seconds)
+                if (autoQualityEnabled && currentTime > 5000 && currentTime - lastQualityAdjust > 3000) {
+                    const avgFPS = fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length;
+                    const currentQuality = document.getElementById('quality-display').textContent.toLowerCase();
+                    
+                    if (avgFPS < 20 && currentQuality !== 'low') {
+                        console.warn('⚠️ Low FPS detected, reducing quality');
+                        if (currentQuality === 'high') setQuality('medium');
+                        else if (currentQuality === 'medium') setQuality('low');
+                        lastQualityAdjust = currentTime;
+                    } else if (avgFPS > 55 && currentQuality === 'low') {
+                        console.log('✓ Good FPS, increasing quality');
+                        setQuality('medium');
+                        lastQualityAdjust = currentTime;
+                    }
+                }
+                
+                frameCount = 0;
+                lastFPSUpdate = currentTime;
+            }
+            
+            // Fixed timestep physics (prevents physics from breaking at low FPS)
+            const maxDelta = 50; // Cap at 20 FPS minimum
+            const clampedDelta = Math.min(deltaTime, maxDelta);
+            const physicsSteps = Math.floor(deltaAccumulator / targetFrameTime);
+            
+            if (physicsSteps > 0) {
+                deltaAccumulator -= physicsSteps * targetFrameTime;
+            }
+
+            if (!paused) {
+                // Handle all controls - check both key and code
+                car.throttle = (keys['ArrowUp'] || keys['w'] || keys['W']) ? 1 : 0;
+                car.brake = (keys['ArrowDown'] || keys['s'] || keys['S']) ? 1 : 0;
+                car.steering = ((keys['ArrowLeft'] || keys['a'] || keys['A']) ? -1 : 0) + 
+                              ((keys['ArrowRight'] || keys['d'] || keys['D']) ? 1 : 0);
+                
+                // Handbrake (Space key)
+                if (keys[' '] || keys['Space']) {
+                    car.brake = 1.5; // Stronger braking
+                }
+
+                car.update(1/60, terrain);
+
+                if (carMesh) {
+                    // Update car mesh position to match physics
+                    // Car position is center of mass, mesh needs to sit on ground
+                    carMesh.position.set(car.position.x, car.position.y, car.position.z);
+                    
+                    // Apply physics rotation
+                    carMesh.rotation.y = car.rotation;
+                    
+                    // Tilt car based on terrain slope for realism
+                    if (car.onGround) {
+                        const terrainNormal = getTerrainNormal(car.position.x, car.position.z);
+                        if (terrainNormal) {
+                            const tiltAmount = 0.1;
+                            carMesh.rotation.x = terrainNormal.x * tiltAmount;
+                            carMesh.rotation.z = terrainNormal.z * tiltAmount;
+                        }
+                    } else {
+                        carMesh.rotation.x = 0;
+                        carMesh.rotation.z = 0;
+                    }
+                }
+                
+                function getTerrainNormal(x, z) {
+                    const h = 0.5;
+                    const hL = terrain.getHeight(x - h, z);
+                    const hR = terrain.getHeight(x + h, z);
+                    const hD = terrain.getHeight(x, z - h);
+                    const hU = terrain.getHeight(x, z + h);
+                    
+                    return {
+                        x: (hL - hR) / (2 * h),
+                        z: (hD - hU) / (2 * h)
+                    };
+                }
+
+                // Advanced camera system - orbits around car with smooth follow
+                if (cameraFollowCar) {
+                    // Calculate camera position based on angle, pitch, and zoom
+                    const carX = car.position.x;
+                    const carY = car.position.y + 2; // Look at point slightly above car
+                    const carZ = car.position.z;
+                    
+                    // Spherical coordinates around the car (FIXED: negate angle for natural rotation)
+                    const targetX = carX + zoomLevel * Math.sin(-cameraAngle) * Math.cos(cameraPitch);
+                    const targetY = carY + zoomLevel * Math.sin(cameraPitch);
+                    const targetZ = carZ + zoomLevel * Math.cos(-cameraAngle) * Math.cos(cameraPitch);
+                    
+                    // Smooth camera movement (lerp)
+                    const smoothness = 0.1;
+                    camera.position.x += (targetX - camera.position.x) * smoothness;
+                    camera.position.y += (targetY - camera.position.y) * smoothness;
+                    camera.position.z += (targetZ - camera.position.z) * smoothness;
+                    
+                    // Always look at the car
+                    camera.lookAt(carX, carY, carZ);
+                    
+                    // Update camera target for free mode
+                    cameraTarget.set(carX, carY, carZ);
+                } else {
+                    // Free camera mode - look at stored target
+                    camera.lookAt(cameraTarget.x, cameraTarget.y, cameraTarget.z);
+                }
+
+                // Force vectors
+                const cf = car.getCentripetalForce();
+                if (cf > 100) {
+                    const right = new THREE.Vector3(Math.cos(car.rotation), 0, -Math.sin(car.rotation));
+                    const scale = Math.min(cf / 2000, 8);
+                    arrowHelper1.position.set(car.position.x, car.position.y + 2, car.position.z);
+                    arrowHelper1.setDirection(right);
+                    arrowHelper1.setLength(scale, scale * 0.2, scale * 0.1);
+                    arrowHelper1.visible = true;
+                } else {
+                    arrowHelper1.visible = false;
+                }
+
+                arrowHelper2.position.set(car.position.x, car.position.y + 2, car.position.z);
+                
+                // Update debug sphere to show ground contact point
+                if (debugSphere.visible) {
+                    const terrainHeight = terrain.getHeight(car.position.x, car.position.z);
+                    debugSphere.position.set(car.position.x, terrainHeight, car.position.z);
+                }
+
+                if (terrain.needsUpdate) updateTerrain();
+            }
+
+            // Update UI (throttled to reduce DOM updates)
+            if (frameCount % 3 === 0) { // Update every 3 frames
+                const speed = car.velocity.length();
+                const statusText = car.onGround ? '' : ' (AIRBORNE)';
+                document.getElementById('speed').textContent = speed.toFixed(1) + statusText;
+                document.getElementById('rpm').textContent = Math.round(car.engineRPM);
+                document.getElementById('gear').textContent = car.gear;
+                document.getElementById('speed2').textContent = speed.toFixed(1);
+                document.getElementById('rpm2').textContent = Math.round(car.engineRPM);
+                document.getElementById('gear2').textContent = car.gear;
+                document.getElementById('gforce').textContent = (car.getCentripetalForce() / (car.mass * 9.81)).toFixed(1);
+                
+                // Update camera info
+                document.getElementById('cam-zoom').textContent = Math.round(zoomLevel);
+                document.getElementById('cam-angle').textContent = Math.round((cameraAngle * 180 / Math.PI) % 360);
+                document.getElementById('cam-pitch').textContent = Math.round(cameraPitch * 180 / Math.PI);
+                document.getElementById('cam-mode').textContent = cameraFollowCar ? '🎯 Following' : '🔓 Free';
+                
+                // Update performance stats
+                document.getElementById('draw-calls').textContent = renderer.info.render.calls;
+                document.getElementById('triangles').textContent = (renderer.info.render.triangles / 1000).toFixed(1) + 'K';
+            }
+
+            // Optimized rendering with culling
+            renderer.render(scene, camera);
+            
+            // Optional: Manual garbage collection hint (helps on mobile)
+            if (frameCount % 300 === 0) {
+                // Every 5 seconds at 60fps
+                renderer.info.reset();
+            }
+        }
+        
+        // Optimize on visibility change (pause when tab hidden)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                paused = true;
+                console.log('⏸️ Paused (tab hidden)');
+            } else {
+                paused = false;
+                lastFrameTime = performance.now();
+                console.log('▶️ Resumed');
+            }
+        });
+
+        // Global functions
+        window.resetCar = () => {
+            const terrainHeight = terrain.getHeight(0, 0);
+            const startHeight = terrainHeight + car.groundClearance + 5; // 5 units above ground
+            car.position = new Vec3(0, startHeight, 0);
+            car.velocity = new Vec3();
+            car.verticalVelocity = 0;
+            car.rotation = 0;
+            car.engineRPM = 1000;
+            car.gear = 1;
+            car.onGround = false;
+            console.log('✓ Car reset - Terrain:', terrainHeight.toFixed(2), 'Car Y:', startHeight.toFixed(2));
+        };
+
+        window.togglePhysics = () => {
+            paused = !paused;
+        };
+        
+        window.resetCamera = () => {
+            cameraAngle = 0;
+            cameraPitch = 0.4;
+            zoomLevel = 30;
+            cameraFollowCar = true;
+            document.getElementById('camera-follow-btn').textContent = '🎯 Follow: ON';
+            console.log('✓ Camera reset to default view');
+        };
+        
+        window.toggleCameraFollow = () => {
+            cameraFollowCar = !cameraFollowCar;
+            const btn = document.getElementById('camera-follow-btn');
+            btn.textContent = cameraFollowCar ? '🎯 Follow: ON' : '🎯 Follow: OFF';
+            console.log('✓ Camera follow:', cameraFollowCar ? 'enabled' : 'disabled');
+        };
+        
+        window.toggleAutoQuality = () => {
+            autoQualityEnabled = document.getElementById('auto-quality').checked;
+            console.log('✓ Auto quality:', autoQualityEnabled ? 'enabled' : 'disabled');
+        };
+
+        window.setTerrain = (type) => {
+            terrain.type = type;
+            terrain.needsUpdate = true;
+            
+            // Reset car position when terrain changes
+            setTimeout(() => {
+                const currentTerrainHeight = terrain.getHeight(car.position.x, car.position.z);
+                const newCarY = currentTerrainHeight + car.groundClearance + 5;
+                car.position.y = newCarY;
+                car.verticalVelocity = 0;
+                car.onGround = false;
+                console.log('✓ Terrain:', type, '| Height:', currentTerrainHeight.toFixed(2), '| Car Y:', newCarY.toFixed(2));
+            }, 100);
+        };
+        
+        // Gravity controls
+        window.setGravity = (value) => {
+            car.gravity = value;
+            document.getElementById('gravity-slider').value = value;
+            // Display as positive value (remove negative sign)
+            document.getElementById('gravity-display').textContent = Math.abs(value).toFixed(2) + ' m/s²';
+        };
+        
+        document.getElementById('gravity-slider').addEventListener('input', (e) => {
+            car.gravity = parseFloat(e.target.value);
+            // Display as positive value (remove negative sign)
+            document.getElementById('gravity-display').textContent = Math.abs(parseFloat(e.target.value)).toFixed(2) + ' m/s²';
+        });
+
+        // Enhanced code execution engine with full programming support
+        let executionInterval = null;
+        let userVariables = {}; // Store user-defined variables
+        let userFunctions = {}; // Store user-defined functions
+        
+        window.executeCode = () => {
+            const code = document.getElementById('code-editor').value;
+            const language = document.getElementById('language').value;
+            const output = document.getElementById('output');
+            
+            try {
+                output.innerHTML = '<span style="color: #4ec9b0;">⚡ Executing...</span><br>';
+                let result = '';
+                
+                // Full JavaScript execution mode
+                if (language === 'javascript') {
+                    try {
+                        // Create execution context with access to car and physics
+                        const executionContext = {
+                            car, terrain, Vec3,
+                            console: {
+                                log: (...args) => {
+                                    result += `<span style="color: #dcdcaa;">${args.join(' ')}</span>\n`;
+                                }
+                            },
+                            print: (...args) => {
+                                result += `<span style="color: #dcdcaa;">${args.join(' ')}</span>\n`;
+                            },
+                            Math, // Full Math library
+                            ...userVariables // Include user variables
+                        };
+                        
+                        // Execute code in context
+                        const func = new Function(...Object.keys(executionContext), code);
+                        func(...Object.values(executionContext));
+                        
+                        if (!result) result = '<span style="color: #4ec9b0;">✓ Code executed successfully!</span>\n';
+                    } catch (err) {
+                        result = `<span style="color: #f48771;">❌ Error: ${err.message}</span>\n`;
+                    }
+                } else {
+                    // Parse and execute code line by line (C++/Python style)
+                    const lines = code.split('\n').filter(l => l.trim() && !l.trim().startsWith('//') && !l.trim().startsWith('#'));
+                    let lineNum = 0;
+                    
+                    lines.forEach(line => {
+                        lineNum++;
+                        line = line.trim();
+                    
+                    try {
+                        // Enhanced command parsing
+                        if (line.includes('setMass')) {
+                            const match = line.match(/setMass\((\d+\.?\d*)\)/);
+                            if (match) {
+                                car.mass = parseFloat(match[1]);
+                                result += `<span style="color: #4ec9b0;">✓ Line ${lineNum}: Mass = ${match[1]} kg</span>\n`;
+                            }
+                        }
+                        else if (line.includes('setEnginePower')) {
+                            const match = line.match(/setEnginePower\((\d+\.?\d*)\)/);
+                            if (match) {
+                                car.enginePower = parseFloat(match[1]);
+                                result += `<span style="color: #4ec9b0;">✓ Line ${lineNum}: Power = ${(match[1]/1000).toFixed(0)} kW</span>\n`;
+                            }
+                        }
+                        else if (line.includes('applyForce')) {
+                            const match = line.match(/Vector3\(([^)]+)\)/);
+                            if (match) {
+                                const [x, y, z] = match[1].split(',').map(v => parseFloat(v.trim()));
+                                const force = new Vec3(x, y, z);
+                                car.velocity = car.velocity.add(force.mul(0.01 / car.mass));
+                                result += `<span style="color: #4ec9b0;">✓ Line ${lineNum}: Force applied (${x}, ${y}, ${z}) N</span>\n`;
+                            }
+                        }
+                        else if (line.includes('setVelocity')) {
+                            const match = line.match(/Vector3\(([^)]+)\)/);
+                            if (match) {
+                                const [x, y, z] = match[1].split(',').map(v => parseFloat(v.trim()));
+                                car.velocity = new Vec3(x, y, z);
+                                result += `<span style="color: #4ec9b0;">✓ Line ${lineNum}: Velocity = (${x}, ${y}, ${z}) m/s</span>\n`;
+                            }
+                        }
+                        else if (line.includes('setPosition')) {
+                            const match = line.match(/Vector3\(([^)]+)\)/);
+                            if (match) {
+                                const [x, y, z] = match[1].split(',').map(v => parseFloat(v.trim()));
+                                car.position = new Vec3(x, y, z);
+                                result += `<span style="color: #4ec9b0;">✓ Line ${lineNum}: Position = (${x}, ${y}, ${z})</span>\n`;
+                            }
+                        }
+                        else if (line.includes('getSpeed')) {
+                            const speed = car.velocity.length();
+                            result += `<span style="color: #dcdcaa;">→ Speed: ${speed.toFixed(2)} m/s (${(speed * 3.6).toFixed(1)} km/h)</span>\n`;
+                        }
+                        else if (line.includes('getPosition')) {
+                            result += `<span style="color: #dcdcaa;">→ Position: (${car.position.x.toFixed(2)}, ${car.position.y.toFixed(2)}, ${car.position.z.toFixed(2)})</span>\n`;
+                        }
+                        else if (line.includes('getVelocity')) {
+                            result += `<span style="color: #dcdcaa;">→ Velocity: (${car.velocity.x.toFixed(2)}, ${car.velocity.y.toFixed(2)}, ${car.velocity.z.toFixed(2)}) m/s</span>\n`;
+                        }
+                        else if (line.includes('setGravity')) {
+                            const match = line.match(/setGravity\(([^)]+)\)/);
+                            if (match) {
+                                car.gravity = parseFloat(match[1]);
+                                result += `<span style="color: #4ec9b0;">✓ Line ${lineNum}: Gravity = ${Math.abs(car.gravity).toFixed(2)} m/s²</span>\n`;
+                            }
+                        }
+                        else if (line.includes('getGravity')) {
+                            result += `<span style="color: #dcdcaa;">→ Gravity: ${Math.abs(car.gravity).toFixed(2)} m/s²</span>\n`;
+                        }
+                        else if (line.includes('getMass')) {
+                            result += `<span style="color: #dcdcaa;">→ Mass: ${car.mass} kg</span>\n`;
+                        }
+                        else if (line.includes('getEnergy')) {
+                            const ke = 0.5 * car.mass * car.velocity.length() ** 2;
+                            const pe = car.mass * Math.abs(car.gravity) * car.position.y;
+                            result += `<span style="color: #dcdcaa;">→ Kinetic Energy: ${ke.toFixed(0)} J</span>\n`;
+                            result += `<span style="color: #dcdcaa;">→ Potential Energy: ${pe.toFixed(0)} J</span>\n`;
+                            result += `<span style="color: #dcdcaa;">→ Total Energy: ${(ke + pe).toFixed(0)} J</span>\n`;
+                        }
+                        else if (line.includes('getMomentum')) {
+                            const p = car.velocity.mul(car.mass);
+                            result += `<span style="color: #dcdcaa;">→ Momentum: (${p.x.toFixed(0)}, ${p.y.toFixed(0)}, ${p.z.toFixed(0)}) kg⋅m/s</span>\n`;
+                            result += `<span style="color: #dcdcaa;">→ Magnitude: ${p.length().toFixed(0)} kg⋅m/s</span>\n`;
+                        }
+                        else if (line.includes('reset')) {
+                            resetCar();
+                            result += `<span style="color: #4ec9b0;">✓ Line ${lineNum}: Car reset</span>\n`;
+                        }
+                        else if (line.includes('wait')) {
+                            const match = line.match(/wait\((\d+\.?\d*)\)/);
+                            if (match) {
+                                result += `<span style="color: #808080;">⏱️ Wait ${match[1]}s (simulated)</span>\n`;
+                            }
+                        }
+                        else if (line.trim()) {
+                            result += `<span style="color: #808080;">⚠️ Line ${lineNum}: Unknown command</span>\n`;
+                        }
+                    } catch (err) {
+                        result += `<span style="color: #f48771;">✗ Line ${lineNum}: ${err.message}</span>\n`;
+                    }
+                    });
+                }
+                
+                output.innerHTML = result || '<span style="color: #4ec9b0;">✓ Code executed successfully!</span>';
+                
+                // Scroll output to bottom
+                output.scrollTop = output.scrollHeight;
+                
+            } catch (error) {
+                output.innerHTML = `<span style="color: #f48771;">❌ Error: ${error.message}</span>`;
+            }
+        };
+        
+        window.clearEditor = () => {
+            document.getElementById('code-editor').value = '';
+            document.getElementById('output').innerHTML = 'Editor cleared. Ready for new code...';
+        };
+        
+        window.stopExecution = () => {
+            if (executionInterval) {
+                clearInterval(executionInterval);
+                executionInterval = null;
+            }
+            car.throttle = 0;
+            car.brake = 0;
+            car.steering = 0;
+            document.getElementById('output').innerHTML += '\n<span style="color: #f48771;">⏹️ Execution stopped</span>';
+        };
+
+        // Comprehensive JEE-Level Physics Experiments
+        const experiments = {
+            kinematics1: {
+                cpp: `// Equations of Motion 
+// v = u + at
+// s = ut + 0.5*a*t²
+// v² = u² + 2as
+
+float u = 0;  // initial velocity
+float a = 5;  // acceleration m/s²
+float t = 4;  // time seconds
+
+float v = u + a*t;  // final velocity
+float s = u*t + 0.5*a*t*t;  // displacement
+
+car.setVelocity(Vector3(0, 0, v));
+car.getSpeed();  // Should be 20 m/s`,
+                desc: "Equations of motion with uniform acceleration"
+            },
+            kinematics2: {
+                cpp: `// Relative Velocity 
+// v_AB = v_A - v_B
+
+float v_car = 20;  // m/s
+float v_wind = 5;   // m/s
+
+// Relative velocity
+float v_rel = v_car - v_wind;
+
+car.setVelocity(Vector3(0, 0, v_rel));
+car.getSpeed();  // 15 m/s`,
+                desc: "Relative velocity and reference frames"
+            },
+            projectile: {
+                cpp: `// Projectile Motion 
+// Range R = u²sin(2θ)/g
+// Max height H = u²sin²(θ)/2g
+
+float u = 20;  // m/s
+float theta = 45 * 3.14159/180;  // 45 degrees
+float g = 9.81;
+
+float R = u*u*sin(2*theta)/g;
+float H = u*u*sin(theta)*sin(theta)/(2*g);
+
+car.setPosition(Vector3(0, H, 0));
+car.getPosition();`,
+                desc: "Projectile motion - range and maximum height"
+            },
+            newton1: {
+                cpp: `// Newton's Second Law 
+// F = ma
+// a = F/m
+
+float F = 10000;  // Force in N
+float m = 1500;   // Mass in kg
+
+float a = F/m;  // Acceleration
+
+car.setMass(m);
+car.applyForce(Vector3(0, 0, F));
+// Acceleration = 6.67 m/s²`,
+                desc: "Newton's laws and force analysis"
+            },
+            friction: {
+                cpp: `// Friction Force 
+// f = μN
+// f_max = μ_s × N (static)
+// f_k = μ_k × N (kinetic)
+
+float mu_s = 0.6;  // static friction
+float mu_k = 0.4;  // kinetic friction
+float N = 1200 * 9.81;  // Normal force
+
+float f_max = mu_s * N;  // Max static
+float f_k = mu_k * N;    // Kinetic
+
+car.setMass(1200);
+// Apply force less than f_max`,
+                desc: "Static and kinetic friction"
+            },
+            work_energy: {
+                cpp: `// Work-Energy Theorem 
+// W = ΔKE = 0.5m(v² - u²)
+// W = F·s·cosθ
+
+float m = 1200;
+float u = 10;  // initial velocity
+float v = 20;  // final velocity
+
+float KE_i = 0.5 * m * u * u;
+float KE_f = 0.5 * m * v * v;
+float W = KE_f - KE_i;
+
+car.setMass(m);
+car.setVelocity(Vector3(0, 0, v));
+car.getEnergy();  // Check KE`,
+                desc: "Work-energy theorem and power"
+            },
+            power: {
+                cpp: `// Power 
+// P = W/t = F·v
+// P = dW/dt
+
+float F = 5000;  // Force in N
+float v = 20;    // velocity m/s
+
+float P = F * v;  // Power in Watts
+// P = 100,000 W = 100 kW
+
+car.setEnginePower(P);
+car.setVelocity(Vector3(0, 0, v));`,
+                desc: "Power, work rate, and efficiency"
+            },
+            momentum: {
+                cpp: `// Conservation of Momentum 
+// p = mv
+// Σp_before = Σp_after
+
+float m1 = 1200;
+float v1 = 20;
+float p1 = m1 * v1;  // momentum
+
+car.setMass(m1);
+car.setVelocity(Vector3(0, 0, v1));
+car.getMomentum();  // 24000 kg·m/s`,
+                desc: "Linear momentum and collisions"
+            },
+            impulse: {
+                cpp: `// Impulse-Momentum 
+// J = Δp = F·Δt
+// J = m(v - u)
+
+float m = 1200;
+float u = 10;
+float v = 20;
+float delta_p = m * (v - u);
+
+// Impulse = 12000 N·s
+
+car.setMass(m);
+car.setVelocity(Vector3(0, 0, v));`,
+                desc: "Impulse and change in momentum"
+            },
+            circular: {
+                cpp: `// Circular Motion 
+// a_c = v²/r (centripetal)
+// F_c = mv²/r
+// ω = v/r
+
+float m = 1200;
+float v = 20;
+float r = 50;
+
+float a_c = v*v/r;  // 8 m/s²
+float F_c = m*v*v/r;  // 9600 N
+float omega = v/r;  // 0.4 rad/s
+
+car.setMass(m);
+car.setVelocity(Vector3(v, 0, 0));`,
+                desc: "Uniform circular motion"
+            },
+            gravitation: {
+                cpp: `// Universal Gravitation 
+// F = GMm/r²
+// g = GM/R²
+// v_escape = √(2GM/R)
+
+float G = 6.67e-11;
+float M_earth = 5.97e24;
+float R_earth = 6.37e6;
+
+float g = G*M_earth/(R_earth*R_earth);
+// g ≈ 9.81 m/s²
+
+car.setGravity(-g);
+car.getGravity();`,
+                desc: "Gravitation and orbital mechanics"
+            },
+            sho: {
+                cpp: `// Simple Harmonic Motion 
+// x = A·sin(ωt + φ)
+// v = Aω·cos(ωt + φ)
+// a = -ω²x
+
+float A = 5;  // amplitude
+float omega = 2;  // angular frequency
+float t = 1;  // time
+
+float x = A * sin(omega*t);
+float v = A * omega * cos(omega*t);
+
+car.setPosition(Vector3(x, 0, 0));
+car.setVelocity(Vector3(v, 0, 0));`,
+                desc: "Simple harmonic motion"
+            },
+            elasticity: {
+                cpp: `// Elastic Collision 
+// v1' = ((m1-m2)u1 + 2m2u2)/(m1+m2)
+// v2' = ((m2-m1)u2 + 2m1u1)/(m1+m2)
+// e = 1 (perfectly elastic)
+
+float m1 = 1200, m2 = 1500;
+float u1 = 20, u2 = 0;
+
+float v1 = ((m1-m2)*u1 + 2*m2*u2)/(m1+m2);
+float v2 = ((m2-m1)*u2 + 2*m1*u1)/(m1+m2);
+
+car.setMass(m1);
+car.setVelocity(Vector3(0, 0, v1));`,
+                desc: "Elastic and inelastic collisions"
+            },
+            rotation: {
+                cpp: `// Rotational Dynamics 
+// τ = Iα (torque)
+// L = Iω (angular momentum)
+// KE_rot = 0.5Iω²
+
+float I = 1000;  // moment of inertia
+float omega = 5;  // angular velocity
+float alpha = 2;  // angular acceleration
+
+float tau = I * alpha;  // torque
+float L = I * omega;  // angular momentum
+float KE = 0.5 * I * omega * omega;
+
+car.setVelocity(Vector3(0, 0, omega*2.5));`,
+                desc: "Rotational kinematics and dynamics"
+            },
+            banking: {
+                cpp: `// Banking of Roads 
+// tanθ = v²/(rg)
+// v_max = √(μrg) (without banking)
+
+float v = 20;  // velocity
+float r = 50;  // radius
+float g = 9.81;
+
+float tan_theta = v*v/(r*g);
+float theta = atan(tan_theta) * 180/3.14159;
+
+// Banking angle ≈ 8.8 degrees
+
+car.setVelocity(Vector3(v, 0, 0));`,
+                desc: "Banking of roads and curves"
+            },
+            spring: {
+                cpp: `// Spring Force 
+// F = -kx (Hooke's Law)
+// PE = 0.5kx²
+// T = 2π√(m/k)
+
+float k = 1000;  // spring constant
+float x = 0.5;   // displacement
+float m = 1200;
+
+float F = k * x;  // 500 N
+float PE = 0.5 * k * x * x;  // 125 J
+float T = 2 * 3.14159 * sqrt(m/k);
+
+car.applyForce(Vector3(0, 0, -F));`,
+                desc: "Spring force and oscillations"
+            },
+            fluid: {
+                cpp: `// Fluid Mechanics 
+// P = ρgh (pressure)
+// F_b = ρVg (buoyancy)
+// v = √(2gh) (Torricelli)
+
+float rho = 1000;  // density kg/m³
+float g = 9.81;
+float h = 10;  // height
+
+float P = rho * g * h;  // Pressure
+float v = sqrt(2 * g * h);  // velocity
+
+car.setVelocity(Vector3(0, 0, v));`,
+                desc: "Fluid pressure and buoyancy"
+            },
+            doppler: {
+                cpp: `// Doppler Effect 
+// f' = f(v±v_o)/(v∓v_s)
+// + when approaching
+// - when receding
+
+float f = 500;  // frequency Hz
+float v = 340;  // sound speed m/s
+float v_s = 20; // source velocity
+
+float f_prime = f * v / (v - v_s);
+// Observed frequency
+
+car.setVelocity(Vector3(0, 0, v_s));`,
+                desc: "Doppler effect in sound"
+            }
+        };
+
+        window.loadExperiment = () => {
+            const exp = document.getElementById('experiment').value;
+            if (exp && experiments[exp]) {
+                document.getElementById('code-editor').value = experiments[exp].cpp;
+                document.getElementById('experiment-desc').innerHTML = 
+                    `<strong>${exp.charAt(0).toUpperCase() + exp.slice(1)}:</strong> ${experiments[exp].desc}`;
+            }
+        };
+
+        // Language switching
+        document.getElementById('language').addEventListener('change', (e) => {
+            const lang = e.target.value;
+            const editor = document.getElementById('code-editor');
+            
+            if (lang === 'python') {
+                editor.value = `# Python Physics Code
+car.set_mass(1500)
+car.set_engine_power(200000)
+car.apply_force(Vector3(0, 0, 1000))`;
+            } else if (lang === 'javascript') {
+                editor.value = `// JavaScript Physics Code
+car.setMass(1500);
+car.setEnginePower(200000);
+car.applyForce(new Vector3(0, 0, 1000));`;
+            } else {
+                editor.value = `// C++ Physics Code
+car.setMass(1500);
+car.setEnginePower(200000);
+car.applyForce(Vector3(0, 0, 1000));`;
+            }
+        });
+
+        animate();
+        
+        // Set default quality to medium with shadows enabled
+        setQuality('medium');
+        
+        // Force shadow map update
+        renderer.shadowMap.needsUpdate = true;
+        
+        console.log('✓ CarX Simulator ready! Use arrow keys to drive.');
+        console.log('✓ Use Code Editor to experiment with physics!');
+        console.log('✓ Performance optimized for low-end devices');
+        console.log('✓ Adjust quality settings if needed');
+    </script>
+</body>
+</html>

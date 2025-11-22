@@ -1,0 +1,15 @@
+build/
+build-wasm/
+*.o
+*.a
+*.so
+*.dll
+*.dylib
+*.wasm
+*.js.mem
+*.exe
+.vscode/
+.idea/
+cmake-build-*/
+compile_commands.json
+*.user

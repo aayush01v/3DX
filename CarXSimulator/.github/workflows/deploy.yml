@@ -1,0 +1,68 @@
+name: Deploy CarX Simulator
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./preview
+          publish_branch: gh-pages
+  
+  build-desktop:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libgl1-mesa-dev libglew-dev libglfw3-dev
+      
+      - name: Install dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install cmake glew glfw
+      
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          cmake --build . --config Release
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: carx-simulator-${{ matrix.os }}
+          path: build/Release/
+  
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Build Docker image
+        run: docker build -t carx-simulator .
+      
+      - name: Test Docker container
+        run: |
+          docker run -d -p 8080:80 --name test carx-simulator
+          sleep 5
+          curl -f http://localhost:8080 || exit 1
+          docker stop test

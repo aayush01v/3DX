@@ -1,0 +1,44 @@
+{
+  "name": "carx-physics-simulator",
+  "version": "1.0.0",
+  "description": "Interactive C++ physics engine with realistic car simulation and 3D visualization",
+  "main": "preview/final-demo.html",
+  "scripts": {
+    "start": "cd preview && python -m http.server 8080",
+    "preview": "cd preview && python -m http.server 8080",
+    "build": "mkdir -p build && cd build && cmake .. && cmake --build .",
+    "deploy": "netlify deploy --prod --dir=preview"
+  },
+  "keywords": [
+    "physics",
+    "simulation",
+    "car",
+    "kinematics",
+    "education",
+    "webgl",
+    "threejs",
+    "cpp"
+  ],
+  "author": "CarX Simulator Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/CarXSimulator.git"
+  },
+  "files": [
+    "preview/",
+    "src/",
+    "include/",
+    "examples/",
+    "docs/",
+    "CMakeLists.txt",
+    "README.md",
+    "DEPLOYMENT.md"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  }
+}
