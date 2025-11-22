@@ -36,23 +36,23 @@ const Scene = forwardRef(function Scene(
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
       />
+      <Physics gravity={[0, -9.81, 0]}>
+        <group position={[0, 0, 0]}>
+          <Cannon ref={cannonRef} yaw={yaw} pitch={pitch} />
+          <ProjectilePool ref={projectileRef} getMuzzleTransform={getMuzzleTransform} />
+          <Targets onTargetDown={onTargetDown} resetToken={resetToken} />
+        </group>
+        <RigidBody type="fixed" restitution={0.05} friction={1} position={[0, 0, 0]}>
+          <mesh receiveShadow rotation-x={-Math.PI / 2}>
+            <planeGeometry args={[GROUND_SIZE, GROUND_SIZE]} />
+            <meshStandardMaterial color="#0b1120" />
+          </mesh>
+        </RigidBody>
+      </Physics>
       <Suspense fallback={null}>
-        <Physics gravity={[0, -9.81, 0]}>
-          <group position={[0, 0, 0]}>
-            <Cannon ref={cannonRef} yaw={yaw} pitch={pitch} />
-            <ProjectilePool ref={projectileRef} getMuzzleTransform={getMuzzleTransform} />
-            <Targets onTargetDown={onTargetDown} resetToken={resetToken} />
-          </group>
-          <RigidBody type="fixed" restitution={0.05} friction={1} position={[0, 0, 0]}>
-            <mesh receiveShadow rotation-x={-Math.PI / 2}>
-              <planeGeometry args={[GROUND_SIZE, GROUND_SIZE]} />
-              <meshStandardMaterial color="#0b1120" />
-            </mesh>
-          </RigidBody>
-        </Physics>
         <Environment preset="sunset" />
-        {enableDebugCamera && <OrbitControls />}
       </Suspense>
+      {enableDebugCamera && <OrbitControls />}
     </Canvas>
   )
 })
