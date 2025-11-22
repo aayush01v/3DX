@@ -12,11 +12,17 @@ export default function CannonPage() {
   const [shots, setShots] = useState(0)
   const [resetToken, setResetToken] = useState(0)
   const [targetsDown, setTargetsDown] = useState(0)
+  const [status, setStatus] = useState('Line up a shot and clear all targets.')
   const totalTargets = useMemo(() => TARGET_POSITIONS.length, [])
+  const accuracy = useMemo(
+    () => (shots === 0 ? '--' : `${Math.round((targetsDown / shots) * 100)}%`),
+    [shots, targetsDown],
+  )
 
   const handleFire = () => {
     sceneRef.current?.fire()
     setShots((s) => s + 1)
+    setStatus('Projectile launched! Track your arc in the HUD.')
   }
 
   const handleReset = () => {
@@ -24,11 +30,20 @@ export default function CannonPage() {
     setShots(0)
     setTargetsDown(0)
     setResetToken((t) => t + 1)
+    setStatus('Arena reset. Take aim and go for a clean run!')
   }
 
   const handleTargetDown = () => {
     setScore((s) => s + 100)
-    setTargetsDown((t) => Math.min(totalTargets, t + 1))
+    setTargetsDown((t) => {
+      const next = Math.min(totalTargets, t + 1)
+      if (next === totalTargets) {
+        setStatus('All targets down! Press reset to replay or chase accuracy.')
+      } else {
+        setStatus(`Target down! ${next}/${totalTargets} cleared.`)
+      }
+      return next
+    })
   }
 
   useEffect(() => {
@@ -65,6 +80,8 @@ export default function CannonPage() {
         score={score}
         shots={shots}
         targets={`${targetsDown}/${totalTargets}`}
+        accuracy={accuracy}
+        status={status}
         onReset={handleReset}
         onFire={handleFire}
         aimHandlers={aim}
