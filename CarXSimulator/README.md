@@ -284,6 +284,9 @@ MIT License - Free to use and modify
 ```bash
 # GitHub Pages, Netlify, Vercel
 cd preview && netlify deploy --prod
+
+# Or deploy the prebuilt preview to Vercel from the repo root
+npm run deploy:vercel
 ```
 
 **Docker:**
