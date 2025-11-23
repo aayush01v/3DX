@@ -1,17 +1,12 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "preview/**",
-      "use": "@vercel/static"
-    }
+
+  "rewrites": [
+    { "source": "/", "destination": "/preview/final-demo.html" }
   ],
-  "routes": [
-    {
-      "src": "/",
-      "dest": "/final-demo.html"
-    }
-  ],
+
+  "trailingSlash": false,
+
   "headers": [
     {
       "source": "/(.*)\\.(glb|gltf)$",
