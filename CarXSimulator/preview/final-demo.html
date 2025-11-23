@@ -393,6 +393,24 @@
             </div>
             
             <div class="section">
+                <h2>🌅 HDR Environment</h2>
+                <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 8px; border-radius: 5px; margin-bottom: 10px; font-size: 11px; color: #856404;">
+                    ⚠️ HDR is only available in <strong>High Quality</strong> mode
+                </div>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; background: white; padding: 10px; border-radius: 5px; border: 1px solid #ddd; cursor: pointer; margin-bottom: 10px;">
+                    <input type="checkbox" id="hdr-enabled" disabled onchange="toggleHDR()">
+                    <span>Enable HDR Environment</span>
+                </label>
+                <label style="font-size: 12px;">Exposure: <span id="exposure-display">0.5</span></label>
+                <input type="range" id="exposure-slider" min="0.5" max="3.0" value="0.5" step="0.1" style="width: 100%; margin-top: 5px;" oninput="setExposure()">
+                <div style="display: flex; justify-content: space-between; font-size: 10px; color: #888; margin-top: 2px;">
+                    <span>Dark</span>
+                    <span>Normal</span>
+                    <span>Bright</span>
+                </div>
+            </div>
+            
+            <div class="section">
                 <h2>⚡ Performance</h2>
                 <label style="font-size: 12px;">Quality: <span id="quality-display">Medium</span></label>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 10px;">
@@ -1133,8 +1151,8 @@ car.getSpeed();</textarea>
         const canvas = document.getElementById('canvas');
         const scene = new THREE.Scene();
         
-        // Sky and atmosphere
-        scene.background = new THREE.Color(0x87ceeb); // Sky blue
+        // Sky and atmosphere - will be replaced by HDR environment
+        scene.background = new THREE.Color(0x87ceeb); // Sky blue (fallback)
         // Disable fog to prevent terrain cut-off appearance
         // scene.fog = new THREE.Fog(0x87ceeb, 100, 500);
 
@@ -1155,9 +1173,74 @@ car.getSpeed();</textarea>
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         
-        // Tone mapping
+        // Tone mapping for HDR
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.0;
+        renderer.toneMappingExposure = 0.5; // Default exposure
+        
+        // Load HDR environment map with optimized resolution
+        import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/EXRLoader.js')
+            .then(module => {
+                const EXRLoader = module.EXRLoader;
+                const loader = new EXRLoader();
+                
+                // Calculate optimal resolution based on screen size
+                const screenWidth = window.innerWidth;
+                const screenHeight = window.innerHeight;
+                const maxDimension = Math.max(screenWidth, screenHeight);
+                
+                // Determine target resolution (power of 2 for better performance)
+                let targetResolution;
+                if (maxDimension <= 1024) {
+                    targetResolution = 512; // Low res for small screens
+                } else if (maxDimension <= 1920) {
+                    targetResolution = 1024; // Medium res for HD screens
+                } else if (maxDimension <= 2560) {
+                    targetResolution = 2048; // High res for 2K screens
+                } else {
+                    targetResolution = 4096; // Ultra res for 4K+ screens
+                }
+                
+                console.log('🌍 Loading HDR environment:', targetResolution + 'px');
+                
+                loader.load(
+                    'farmland_overcast_1k.exr',
+                    (texture) => {
+                        // Optimize texture settings
+                        texture.mapping = THREE.EquirectangularReflectionMapping;
+                        
+                        // Store texture globally for toggle control
+                        window.hdrTexture = texture;
+                        
+                        // Don't automatically enable - let quality setting control it
+                        // HDR will only be enabled when quality is set to "High"
+                        
+                        // Set default exposure
+                        renderer.toneMappingExposure = 0.5;
+                        
+                        // Disable HDR checkbox initially (will be enabled by quality setting)
+                        document.getElementById('hdr-enabled').checked = false;
+                        document.getElementById('hdr-enabled').disabled = true;
+                        
+                        console.log('✓ HDR environment loaded successfully!');
+                        console.log('  Resolution:', texture.image.width + 'x' + texture.image.height);
+                        console.log('  Optimized for screen:', targetResolution + 'px');
+                        console.log('  HDR will be enabled when Quality is set to High');
+                    },
+                    (progress) => {
+                        const percent = (progress.loaded / progress.total * 100).toFixed(0);
+                        console.log('Loading HDR:', percent + '%');
+                    },
+                    (error) => {
+                        console.warn('⚠️ Failed to load HDR environment:', error);
+                        console.log('Using fallback sky color');
+                        // Keep the fallback sky blue color
+                    }
+                );
+            })
+            .catch(error => {
+                console.warn('⚠️ EXRLoader not available:', error);
+                console.log('Using fallback sky color');
+            });
 
         // Optimized lighting setup
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -1177,10 +1260,12 @@ car.getSpeed();</textarea>
         sunLight.shadow.camera.far = 200;
         
         // Shadow quality
-        sunLight.shadow.mapSize.width = 1024;
-        sunLight.shadow.mapSize.height = 1024;
-        sunLight.shadow.bias = -0.001;
+        sunLight.shadow.mapSize.width = 2048; // Higher resolution for better shadows
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.bias = -0.0005; // Reduced bias for better shadow contact
+        sunLight.shadow.normalBias = 0.02; // Add normal bias to prevent shadow acne
         scene.add(sunLight);
+        scene.add(sunLight.target); // Add target to scene so it can be updated
 
         // Hemisphere light for natural ambient
         const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x4a7c3a, 0.6);
@@ -1275,6 +1360,107 @@ car.getSpeed();</textarea>
         terrainMesh.castShadow = false;
         scene.add(terrainMesh);
 
+        // Vegetation system (trees only) - only for high quality
+        let treesGroup = new THREE.Group();
+        let vegetationLoaded = false;
+        let treeModel = null;
+        
+        // Create simple procedural trees instead of loading broken GLB
+        function createSimpleTree() {
+            const tree = new THREE.Group();
+            
+            // Trunk - cylinder is centered at origin, so we position it so bottom is at y=0
+            const trunkHeight = 3;
+            const trunkGeometry = new THREE.CylinderGeometry(0.3, 0.4, trunkHeight, 8);
+            const trunkMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x4a3728,
+                roughness: 0.9,
+                metalness: 0.0
+            });
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.y = trunkHeight / 2; // Position so bottom of trunk is at y=0
+            trunk.castShadow = true;
+            trunk.receiveShadow = true;
+            tree.add(trunk);
+            
+            // Foliage layers (pine tree style)
+            const foliageMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x2d5016,
+                roughness: 0.9,
+                metalness: 0.0,
+                flatShading: true
+            });
+            
+            const layers = [
+                { y: 3.5, radius: 2.0 },
+                { y: 4.5, radius: 1.6 },
+                { y: 5.5, radius: 1.2 },
+                { y: 6.3, radius: 0.7 }
+            ];
+            
+            layers.forEach(layer => {
+                const foliageGeometry = new THREE.ConeGeometry(layer.radius, 1.5, 8);
+                const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+                foliage.position.y = layer.y;
+                foliage.castShadow = true;
+                foliage.receiveShadow = true;
+                tree.add(foliage);
+            });
+            
+            return tree;
+        }
+        
+        treeModel = createSimpleTree();
+        vegetationLoaded = true;
+        console.log('✓ Simple procedural trees ready');
+        
+        function spawnVegetation() {
+            if (!vegetationLoaded || !treeModel) return;
+            
+            // Clear existing vegetation
+            treesGroup.clear();
+            
+            const carPos = car.position;
+            const spawnRadius = 100; // Spawn within 100 units of car
+            const treeCount = 30; // Number of trees
+            
+            // Spawn trees randomly
+            for (let i = 0; i < treeCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 20 + Math.random() * spawnRadius; // Keep away from car
+                const x = carPos.x + Math.cos(angle) * distance;
+                const z = carPos.z + Math.sin(angle) * distance;
+                
+                // Trees should be at y=0 because terrain mesh is at y=0 with heights baked into vertices
+                // The terrain.getHeight() returns logical height but visual mesh is at y=0
+                const tree = treeModel.clone(true); // Deep clone to ensure independent positioning
+                tree.position.set(x, 0, z); // Place at ground plane (y=0)
+                tree.rotation.y = Math.random() * Math.PI * 2;
+                const scale = 1.0 + Math.random() * 0.5; // Random scale 1.0-1.5 (normal size)
+                tree.scale.set(scale, scale, scale);
+                treesGroup.add(tree);
+                
+
+            }
+            
+            console.log('✓ Spawned', treeCount, 'trees');
+        }
+        
+        function clearVegetation() {
+            treesGroup.clear();
+            console.log('✓ Vegetation cleared');
+        }
+        
+        scene.add(treesGroup);
+        
+        // Spawn trees immediately for testing
+        setTimeout(() => {
+            if (vegetationLoaded) {
+                spawnVegetation();
+                console.log('✓ Initial trees spawned');
+            }
+        }, 1000);
+
         // NO GRID - Only the terrain mesh is visible
 
         // Force arrows
@@ -1353,8 +1539,7 @@ car.getSpeed();</textarea>
         // Initial terrain setup
         updateTerrain();
         
-        // Debug: Test terrain height at origin
-        console.log('Terrain height at (0,0):', terrain.getHeight(0, 0));
+
 
         // Input handling - MUST be after keys object is defined
         document.addEventListener('keydown', (e) => {
@@ -1417,7 +1602,7 @@ car.getSpeed();</textarea>
         canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
             zoomLevel += e.deltaY * 0.01;
-            zoomLevel = Math.max(10, Math.min(80, zoomLevel)); // Limit zoom range
+            zoomLevel = Math.max(10, Math.min(400, zoomLevel)); // Limit zoom range (10m - 400m)
         }, { passive: false });
         
         // Mouse drag controls
@@ -1507,7 +1692,7 @@ car.getSpeed();</textarea>
                 if (lastTouchDistance > 0) {
                     const delta = lastTouchDistance - distance;
                     zoomLevel += delta * 0.1;
-                    zoomLevel = Math.max(10, Math.min(80, zoomLevel));
+                    zoomLevel = Math.max(10, Math.min(400, zoomLevel)); // Limit zoom range (10m - 400m)
                 }
                 
                 lastTouchDistance = distance;
@@ -1564,6 +1749,17 @@ car.getSpeed();</textarea>
                     renderer.shadowMap.autoUpdate = false;
                     renderer.toneMapping = THREE.LinearToneMapping;
                     sunLight.intensity = 2.0;
+                    // Disable HDR for low quality
+                    if (window.hdrTexture) {
+                        scene.environment = null;
+                        scene.background = new THREE.Color(0x87ceeb);
+                        document.getElementById('hdr-enabled').checked = false;
+                        document.getElementById('hdr-enabled').disabled = true;
+                    }
+                    // Clear vegetation for low quality
+                    if (typeof clearVegetation === 'function') {
+                        clearVegetation();
+                    }
                     break;
                     
                 case 'medium':
@@ -1575,6 +1771,17 @@ car.getSpeed();</textarea>
                     sunLight.intensity = 2.5;
                     sunLight.shadow.mapSize.width = 1024;
                     sunLight.shadow.mapSize.height = 1024;
+                    // Disable HDR for medium quality
+                    if (window.hdrTexture) {
+                        scene.environment = null;
+                        scene.background = new THREE.Color(0x87ceeb);
+                        document.getElementById('hdr-enabled').checked = false;
+                        document.getElementById('hdr-enabled').disabled = true;
+                    }
+                    // Clear vegetation for medium quality
+                    if (typeof clearVegetation === 'function') {
+                        clearVegetation();
+                    }
                     break;
                     
                 case 'high':
@@ -1583,9 +1790,27 @@ car.getSpeed();</textarea>
                     renderer.shadowMap.autoUpdate = true;
                     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
                     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-                    sunLight.intensity = 2.5;
                     sunLight.shadow.mapSize.width = 2048;
                     sunLight.shadow.mapSize.height = 2048;
+                    // Enable HDR for high quality
+                    if (window.hdrTexture) {
+                        scene.environment = window.hdrTexture;
+                        scene.background = window.hdrTexture;
+                        // Adjust lighting for HDR to preserve shadows
+                        ambientLight.intensity = 0.3;
+                        sunLight.intensity = 3.5; // Stronger sun for visible shadows with HDR
+                        document.getElementById('hdr-enabled').checked = true;
+                        document.getElementById('hdr-enabled').disabled = false;
+                        console.log('✓ HDR environment enabled (High Quality) - lighting adjusted for shadows');
+                    } else {
+                        // No HDR, use normal lighting
+                        ambientLight.intensity = 0.6;
+                        sunLight.intensity = 2.5;
+                    }
+                    // Spawn vegetation for high quality
+                    if (typeof spawnVegetation === 'function') {
+                        spawnVegetation();
+                    }
                     break;
             }
             
@@ -1718,6 +1943,11 @@ car.getSpeed();</textarea>
                     }
                 }
                 
+                // Update shadow camera to follow car
+                sunLight.position.set(car.position.x + 50, 100, car.position.z + 50);
+                sunLight.target.position.set(car.position.x, 0, car.position.z);
+                sunLight.target.updateMatrixWorld();
+                
                 function getTerrainNormal(x, z) {
                     const h = 0.5;
                     const hL = terrain.getHeight(x - h, z);
@@ -1784,6 +2014,10 @@ car.getSpeed();</textarea>
                 // Check every frame for smooth terrain generation
                 if (terrain.checkUpdate(car.position.x, car.position.z)) {
                     updateTerrain();
+                    // Respawn trees at new terrain heights
+                    if (typeof spawnVegetation === 'function' && vegetationLoaded) {
+                        spawnVegetation();
+                    }
                     showNotification('🗺️ Terrain auto-generated', 'info');
                 }
                 
@@ -1953,6 +2187,43 @@ car.getSpeed();</textarea>
         window.toggleABS = () => {
             car.abs = document.getElementById('abs').checked;
             console.log('✓ ABS:', car.abs ? 'ON' : 'OFF');
+        };
+        
+        // HDR Environment controls
+        const fallbackSkyColor = new THREE.Color(0x87ceeb);
+        
+        window.toggleHDR = () => {
+            const enabled = document.getElementById('hdr-enabled').checked;
+            const currentQuality = document.getElementById('quality-display').textContent.toLowerCase();
+            
+            // Only allow HDR toggle when quality is High
+            if (currentQuality !== 'high') {
+                document.getElementById('hdr-enabled').checked = false;
+                console.warn('⚠️ HDR is only available in High Quality mode');
+                return;
+            }
+            
+            if (enabled && window.hdrTexture) {
+                scene.environment = window.hdrTexture;
+                scene.background = window.hdrTexture;
+                // Reduce ambient light when HDR is enabled to preserve shadows
+                ambientLight.intensity = 0.3;
+                sunLight.intensity = 3.0; // Increase sun to maintain shadow visibility
+                console.log('✓ HDR environment enabled - adjusted lighting for shadows');
+            } else {
+                scene.environment = null;
+                scene.background = fallbackSkyColor;
+                // Restore normal lighting
+                ambientLight.intensity = 0.6;
+                sunLight.intensity = 2.5;
+                console.log('✓ HDR environment disabled - using fallback sky');
+            }
+        };
+        
+        window.setExposure = () => {
+            const value = parseFloat(document.getElementById('exposure-slider').value);
+            renderer.toneMappingExposure = value;
+            document.getElementById('exposure-display').textContent = value.toFixed(1);
         };
         
         // Global functions
