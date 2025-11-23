@@ -42,6 +42,18 @@ public:
     // Collision detection
     bool isInBounds(float x, float z) const;
     
+    // Advanced terrain features
+    void addObstacle(float x, float z, float radius, float height);
+    void addRamp(float x, float z, float width, float length, float height);
+    void smoothTerrain(int iterations = 1);
+    void applyErosion(float strength = 0.1f);
+    
+    // Material zones
+    void setMaterialZone(float x, float z, float radius, float frictionValue);
+    
+    // Terrain deformation
+    void deform(float x, float z, float radius, float depth);
+    
 private:
     Vector3 calculateNormal(int x, int z) const;
     
@@ -53,11 +65,16 @@ private:
     
     std::vector<float> heights;
     std::vector<float> friction;  // Per-vertex friction
+    std::vector<Vector3> normals; // Cached normals for performance
     int width, depth;
     float curvature;  // Affects gravity direction
     float scale;
     unsigned int seed; // Random seed for terrain generation
     TerrainType type;
+    bool normalsCached;
     
     mutable std::mt19937 rng; // Random number generator
+    
+    void cacheNormals();
+    void invalidateNormals() { normalsCached = false; }
 };

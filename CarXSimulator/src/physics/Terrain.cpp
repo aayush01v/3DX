@@ -4,9 +4,10 @@
 #include <chrono>
 
 Terrain::Terrain(int width, int depth) 
-    : width(width), depth(depth), curvature(0.0f), scale(1.0f), type(TerrainType::FLAT) {
+    : width(width), depth(depth), curvature(0.0f), scale(1.0f), type(TerrainType::FLAT), normalsCached(false) {
     heights.resize(width * depth, 0.0f);
     friction.resize(width * depth, 1.0f);
+    normals.resize(width * depth, Vector3(0, 1, 0));
     
     // Initialize with random seed
     auto now = std::chrono::high_resolution_clock::now();
@@ -76,10 +77,13 @@ void Terrain::generateProcedural(float amplitude, float frequency) {
         }
     }
     type = TerrainType::CUSTOM;
+    invalidateNormals();
+    cacheNormals();
 }
 
 void Terrain::generateByType(TerrainType terrainType) {
     type = terrainType;
+    invalidateNormals();
     
     switch (type) {
         case TerrainType::FLAT:
@@ -150,6 +154,7 @@ void Terrain::generateByType(TerrainType terrainType) {
         default:
             break;
     }
+    cacheNormals();
 }
 
 void Terrain::generateRaceTrack(float radius, float trackWidth, float banking) {
@@ -306,3 +311,149 @@ float Terrain::smoothNoise(int x, int z) const {
 
 
 // Remove duplicate definitions - already defined above
+
+void Terrain::cacheNormals() {
+    for (int z = 0; z < depth; ++z) {
+        for (int x = 0; x < width; ++x) {
+            if (x > 0 && x < width - 1 && z > 0 && z < depth - 1) {
+                normals[z * width + x] = calculateNormal(x, z);
+            } else {
+                normals[z * width + x] = Vector3(0, 1, 0);
+            }
+        }
+    }
+    normalsCached = true;
+}
+
+void Terrain::addObstacle(float x, float z, float radius, float height) {
+    for (int iz = 0; iz < depth; ++iz) {
+        for (int ix = 0; ix < width; ++ix) {
+            float worldX = (ix - width / 2.0f) * scale;
+            float worldZ = (iz - depth / 2.0f) * scale;
+            
+            float dx = worldX - x;
+            float dz = worldZ - z;
+            float dist = std::sqrt(dx * dx + dz * dz);
+            
+            if (dist < radius) {
+                float factor = 1.0f - (dist / radius);
+                float obstacleHeight = height * factor * factor;
+                heights[iz * width + ix] += obstacleHeight;
+            }
+        }
+    }
+    invalidateNormals();
+    cacheNormals();
+}
+
+void Terrain::addRamp(float x, float z, float width, float length, float height) {
+    for (int iz = 0; iz < depth; ++iz) {
+        for (int ix = 0; ix < this->width; ++ix) {
+            float worldX = (ix - this->width / 2.0f) * scale;
+            float worldZ = (iz - this->depth / 2.0f) * scale;
+            
+            float dx = std::abs(worldX - x);
+            float dz = worldZ - z;
+            
+            if (dx < width / 2.0f && dz > 0 && dz < length) {
+                float progress = dz / length;
+                float rampHeight = height * progress;
+                heights[iz * this->width + ix] = std::max(heights[iz * this->width + ix], rampHeight);
+            }
+        }
+    }
+    invalidateNormals();
+    cacheNormals();
+}
+
+void Terrain::smoothTerrain(int iterations) {
+    for (int iter = 0; iter < iterations; ++iter) {
+        std::vector<float> smoothed = heights;
+        
+        for (int z = 1; z < depth - 1; ++z) {
+            for (int x = 1; x < width - 1; ++x) {
+                float sum = 0.0f;
+                int count = 0;
+                
+                for (int dz = -1; dz <= 1; ++dz) {
+                    for (int dx = -1; dx <= 1; ++dx) {
+                        sum += heights[(z + dz) * width + (x + dx)];
+                        count++;
+                    }
+                }
+                
+                smoothed[z * width + x] = sum / count;
+            }
+        }
+        
+        heights = smoothed;
+    }
+    invalidateNormals();
+    cacheNormals();
+}
+
+void Terrain::applyErosion(float strength) {
+    std::vector<float> eroded = heights;
+    
+    for (int z = 1; z < depth - 1; ++z) {
+        for (int x = 1; x < width - 1; ++x) {
+            float center = heights[z * width + x];
+            float maxDiff = 0.0f;
+            
+            for (int dz = -1; dz <= 1; ++dz) {
+                for (int dx = -1; dx <= 1; ++dx) {
+                    if (dx == 0 && dz == 0) continue;
+                    float neighbor = heights[(z + dz) * width + (x + dx)];
+                    float diff = center - neighbor;
+                    if (diff > maxDiff) maxDiff = diff;
+                }
+            }
+            
+            if (maxDiff > 0.5f) {
+                eroded[z * width + x] -= strength * maxDiff;
+            }
+        }
+    }
+    
+    heights = eroded;
+    invalidateNormals();
+    cacheNormals();
+}
+
+void Terrain::setMaterialZone(float x, float z, float radius, float frictionValue) {
+    for (int iz = 0; iz < depth; ++iz) {
+        for (int ix = 0; ix < width; ++ix) {
+            float worldX = (ix - width / 2.0f) * scale;
+            float worldZ = (iz - depth / 2.0f) * scale;
+            
+            float dx = worldX - x;
+            float dz = worldZ - z;
+            float dist = std::sqrt(dx * dx + dz * dz);
+            
+            if (dist < radius) {
+                friction[iz * width + ix] = frictionValue;
+            }
+        }
+    }
+}
+
+void Terrain::deform(float x, float z, float radius, float depth) {
+    for (int iz = 0; iz < this->depth; ++iz) {
+        for (int ix = 0; ix < width; ++ix) {
+            float worldX = (ix - width / 2.0f) * scale;
+            float worldZ = (iz - this->depth / 2.0f) * scale;
+            
+            float dx = worldX - x;
+            float dz = worldZ - z;
+            float dist = std::sqrt(dx * dx + dz * dz);
+            
+            if (dist < radius) {
+                float factor = 1.0f - (dist / radius);
+                float deformation = depth * factor * factor;
+                heights[iz * width + ix] += deformation;
+            }
+        }
+    }
+    invalidateNormals();
+    cacheNormals();
+}

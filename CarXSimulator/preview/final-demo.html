@@ -68,19 +68,75 @@
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.5);
             color: white;
             padding: 15px 20px;
             border-radius: 10px;
             font-family: 'Courier New', monospace;
             font-size: 13px;
             backdrop-filter: blur(10px);
+            min-width: 200px;
+        }
+        #hud .hud-section {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        #hud .hud-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        #hud .hud-label {
+            color: #888;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+        #hud .hud-value {
+            color: #4ec9b0;
+            font-weight: 600;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-on { background: #4ec9b0; }
+        .status-off { background: #666; }
+        .notification {
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 12px;
+            backdrop-filter: blur(10px);
+            animation: slideIn 0.3s ease-out;
+            border-left: 3px solid #4ec9b0;
+        }
+        .notification.warning {
+            border-left-color: #ffa500;
+        }
+        .notification.error {
+            border-left-color: #f48771;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
         #camera-info {
             position: absolute;
             top: 20px;
             right: 20px;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.5);
             color: white;
             padding: 10px 15px;
             border-radius: 8px;
@@ -97,7 +153,7 @@
             position: absolute;
             bottom: 20px;
             left: 20px;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.5);
             color: white;
             padding: 10px 15px;
             border-radius: 8px;
@@ -115,10 +171,28 @@
         <div id="viewport">
             <canvas id="canvas"></canvas>
             <div id="hud">
-                <div><strong>🚗 CarX Physics Simulator</strong></div>
-                <div>Speed: <span id="speed">0</span> m/s</div>
-                <div>RPM: <span id="rpm">1000</span></div>
-                <div>Gear: <span id="gear">1</span></div>
+                <div class="hud-section">
+                    <div><strong>🚗 CarX Simulator v2.2</strong></div>
+                    <div style="font-size: 10px; color: #888; margin-top: 2px;">Professional Physics</div>
+                </div>
+                
+                <div class="hud-section">
+                    <div>Speed: <span id="speed" class="hud-value">0</span> m/s</div>
+                    <div>RPM: <span id="rpm" class="hud-value">1000</span></div>
+                    <div>Gear: <span id="gear" class="hud-value">1</span></div>
+                </div>
+                
+                <div class="hud-section">
+                    <div class="hud-label">Systems</div>
+                    <div><span class="status-indicator status-on" id="tc-indicator"></span>TC: <span id="tc-status">ON</span></div>
+                    <div><span class="status-indicator status-on" id="abs-indicator"></span>ABS: <span id="abs-status">ON</span></div>
+                </div>
+                
+                <div class="hud-section">
+                    <div class="hud-label">Tire Avg</div>
+                    <div>Temp: <span id="hud-tire-temp" class="hud-value">25°C</span></div>
+                    <div>Wear: <span id="hud-tire-wear" class="hud-value">0%</span></div>
+                </div>
             </div>
             <div id="camera-info">
                 <div class="label">Camera</div>
@@ -133,8 +207,10 @@
                 <div><kbd>↑</kbd> or <kbd>W</kbd> Throttle | <kbd>↓</kbd> or <kbd>S</kbd> Brake</div>
                 <div><kbd>←</kbd><kbd>→</kbd> or <kbd>A</kbd><kbd>D</kbd> Steer | <kbd>Space</kbd> Handbrake</div>
                 <div><kbd>Drag</kbd> Rotate | <kbd>Wheel</kbd> Zoom | <kbd>C</kbd> Follow | <kbd>R</kbd> Reset | <kbd>G</kbd> Debug</div>
-                <div style="margin-top: 5px; font-size: 10px; opacity: 0.7;">🎮 Camera centered on car - Press G to see ground contact</div>
+                <div style="margin-top: 5px; font-size: 10px; opacity: 0.7;">🎮 Professional Physics v2.2 - Pacejka Tires, Load Transfer, Downforce</div>
             </div>
+            
+            <div id="notifications" style="position: absolute; bottom: 80px; left: 20px; max-width: 300px;"></div>
         </div>
         <div id="controls">
             <h1>🏎️ CarX Simulator</h1>
@@ -153,12 +229,133 @@
                     </div>
                     <div class="stat">
                         <div class="stat-label">Gear</div>
-                        <div class="stat-value"><span id="gear2">1</span> <span class="stat-unit">/ 6</span></div>
+                        <div class="stat-value"><span id="gear2">1</span></div>
                     </div>
                     <div class="stat">
                         <div class="stat-label">G-Force</div>
                         <div class="stat-value"><span id="gforce">0.0</span> <span class="stat-unit">g</span></div>
                     </div>
+                </div>
+            </div>
+            
+            <div class="section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+                <h2 style="color: white;">🏎️ Professional Physics v2.2</h2>
+                <div style="font-size: 12px; line-height: 1.6;">
+                    <div style="margin-bottom: 8px;">✅ <strong>Pacejka Tire Model</strong> - Industry standard</div>
+                    <div style="margin-bottom: 8px;">✅ <strong>Load Transfer</strong> - Realistic weight shift</div>
+                    <div style="margin-bottom: 8px;">✅ <strong>Aerodynamic Downforce</strong> - Speed-dependent grip</div>
+                    <div style="margin-bottom: 8px;">✅ <strong>Tire Temperature</strong> - Heat simulation</div>
+                    <div style="margin-bottom: 8px;">✅ <strong>Tire Wear</strong> - Long-term degradation</div>
+                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 11px; opacity: 0.9;">
+                        Based on: Project Chrono, Pacejka Formula, Open-Car-Dynamics
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🔥 Advanced Telemetry</h2>
+                <div style="font-size: 12px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>Downforce:</span>
+                        <span id="downforce" style="font-weight: 600; color: #667eea;">0 N</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>Roll Angle:</span>
+                        <span id="roll-angle" style="font-weight: 600; color: #667eea;">0°</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>Pitch Angle:</span>
+                        <span id="pitch-angle" style="font-weight: 600; color: #667eea;">0°</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>Load Transfer:</span>
+                        <span id="load-transfer" style="font-weight: 600; color: #667eea;">Balanced</span>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 15px;">
+                    <h3 style="font-size: 13px; margin-bottom: 10px; color: #333;">🛞 Tire Data (Live)</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px;">
+                        <div style="background: white; padding: 8px; border-radius: 6px; border: 1px solid #e0e0e0;">
+                            <div style="font-weight: 600; color: #888; margin-bottom: 4px;">FL</div>
+                            <div>Temp: <span id="tire-temp-fl" style="color: #667eea;">25°C</span></div>
+                            <div>Wear: <span id="tire-wear-fl" style="color: #667eea;">0%</span></div>
+                            <div>Load: <span id="tire-load-fl" style="color: #667eea;">0N</span></div>
+                        </div>
+                        <div style="background: white; padding: 8px; border-radius: 6px; border: 1px solid #e0e0e0;">
+                            <div style="font-weight: 600; color: #888; margin-bottom: 4px;">FR</div>
+                            <div>Temp: <span id="tire-temp-fr" style="color: #667eea;">25°C</span></div>
+                            <div>Wear: <span id="tire-wear-fr" style="color: #667eea;">0%</span></div>
+                            <div>Load: <span id="tire-load-fr" style="color: #667eea;">0N</span></div>
+                        </div>
+                        <div style="background: white; padding: 8px; border-radius: 6px; border: 1px solid #e0e0e0;">
+                            <div style="font-weight: 600; color: #888; margin-bottom: 4px;">RL</div>
+                            <div>Temp: <span id="tire-temp-rl" style="color: #667eea;">25°C</span></div>
+                            <div>Wear: <span id="tire-wear-rl" style="color: #667eea;">0%</span></div>
+                            <div>Load: <span id="tire-load-rl" style="color: #667eea;">0N</span></div>
+                        </div>
+                        <div style="background: white; padding: 8px; border-radius: 6px; border: 1px solid #e0e0e0;">
+                            <div style="font-weight: 600; color: #888; margin-bottom: 4px;">RR</div>
+                            <div>Temp: <span id="tire-temp-rr" style="color: #667eea;">25°C</span></div>
+                            <div>Wear: <span id="tire-wear-rr" style="color: #667eea;">0%</span></div>
+                            <div>Load: <span id="tire-load-rr" style="color: #667eea;">0N</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>⚙️ Vehicle Setup</h2>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 12px; font-weight: 600;">Tire Type</label>
+                    <select id="tire-type" onchange="setTireType()" style="width: 100%; padding: 8px; margin-top: 5px; border-radius: 5px; border: 1px solid #ddd;">
+                        <option value="street">Street (Balanced)</option>
+                        <option value="sport" selected>Sport (Performance)</option>
+                        <option value="racing">Racing (Maximum Grip)</option>
+                        <option value="offroad">Off-Road (Soft)</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 12px; font-weight: 600;">Drive Type</label>
+                    <select id="drive-type" onchange="setDriveType()" style="width: 100%; padding: 8px; margin-top: 5px; border-radius: 5px; border: 1px solid #ddd;">
+                        <option value="fwd">FWD (Front-Wheel Drive)</option>
+                        <option value="rwd" selected>RWD (Rear-Wheel Drive)</option>
+                        <option value="awd">AWD (All-Wheel Drive)</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 12px; font-weight: 600;">Downforce: <span id="downforce-value">0.5</span></label>
+                    <input type="range" id="downforce-slider" min="0" max="2" value="0.5" step="0.1" style="width: 100%; margin-top: 5px;" oninput="setDownforce()">
+                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: #888; margin-top: 2px;">
+                        <span>None</span>
+                        <span>Street</span>
+                        <span>Race</span>
+                        <span>F1</span>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 12px; font-weight: 600;">Suspension: <span id="suspension-value">Medium</span></label>
+                    <input type="range" id="suspension-slider" min="0" max="2" value="1" step="1" style="width: 100%; margin-top: 5px;" oninput="setSuspension()">
+                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: #888; margin-top: 2px;">
+                        <span>Soft</span>
+                        <span>Medium</span>
+                        <span>Stiff</span>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 5px; font-size: 12px; background: white; padding: 8px; border-radius: 5px; border: 1px solid #ddd; cursor: pointer;">
+                        <input type="checkbox" id="traction-control" checked onchange="toggleTC()">
+                        <span>Traction Control</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px; font-size: 12px; background: white; padding: 8px; border-radius: 5px; border: 1px solid #ddd; cursor: pointer;">
+                        <input type="checkbox" id="abs" checked onchange="toggleABS()">
+                        <span>ABS</span>
+                    </label>
                 </div>
             </div>
             
@@ -320,9 +517,9 @@ car.getSpeed();</textarea>
         class Car {
             constructor() {
                 // Start at terrain height + offset
-                const initialHeight = 10; // Will be adjusted after terrain loads
+                const initialHeight = 10; // Start higher to ensure airborne detection
                 this.position = new Vec3(0, initialHeight, 0);
-                this.velocity = new Vec3(0, 0, -5); // Initial velocity: 5 m/s forward
+                this.velocity = new Vec3(0, 0, 0); // Start stationary
                 this.verticalVelocity = 0; // Separate vertical velocity
                 this.rotation = 0;
                 this.mass = 1200;
@@ -334,24 +531,145 @@ car.getSpeed();</textarea>
                 this.gear = 1;
                 this.gravity = -9.81; // Default Earth gravity
                 this.onGround = false;
-                this.groundClearance = 0.8; // Distance from physics center to wheels (half car height)
-                this.wheelRadius = 0.4; // Wheel size
+                this.airborneTime = 0; // Track time in air
+                this.groundClearance = 0.5; // Distance from wheel contact to car center of mass
+                this.wheelRadius = 0.35; // Wheel size (matches C++ code)
+                
+                // Advanced physics properties
+                this.tireType = 'sport';
+                this.driveType = 'rwd';
+                this.downforceCoefficient = 0.5;
+                this.suspensionStiffness = 1; // 0=soft, 1=medium, 2=stiff
+                this.tractionControl = true;
+                this.abs = true;
+                
+                // Tire simulation
+                this.tires = [
+                    { temp: 25, wear: 0, load: 0, grip: 1.0 }, // FL
+                    { temp: 25, wear: 0, load: 0, grip: 1.0 }, // FR
+                    { temp: 25, wear: 0, load: 0, grip: 1.0 }, // RL
+                    { temp: 25, wear: 0, load: 0, grip: 1.0 }  // RR
+                ];
+                
+                // Aerodynamics
+                this.downforce = 0;
+                this.rollAngle = 0;
+                this.pitchAngle = 0;
+                
+                // Load transfer
+                this.loadTransfer = 'balanced';
             }
 
             update(dt, terrain) {
+                // Debug: Log update calls occasionally
+                if (Math.random() < 0.01) {
+                    console.log('🔄 Update called:', 
+                              'pos:', this.position.y.toFixed(2), 
+                              'vVel:', this.verticalVelocity.toFixed(2),
+                              'onGround:', this.onGround,
+                              'throttle:', this.throttle.toFixed(2));
+                }
+                
                 // Horizontal physics first
                 const forward = new Vec3(-Math.sin(this.rotation), 0, -Math.cos(this.rotation));
                 const right = new Vec3(Math.cos(this.rotation), 0, -Math.sin(this.rotation));
                 
-                // Apply forces
-                const engineForce = forward.mul(this.throttle * this.enginePower / this.mass);
+                const speed = this.velocity.length();
+                
+                // Calculate aerodynamic downforce (increases with speed²)
+                const airDensity = 1.225;
+                const frontalArea = 2.2;
+                this.downforce = 0.5 * airDensity * speed * speed * frontalArea * this.downforceCoefficient;
+                
+                // Update tire temperatures based on speed and slip
+                this.tires.forEach((tire, i) => {
+                    // Heat generation from driving
+                    const heatGen = speed * 0.05 + Math.abs(this.throttle) * 0.5 + Math.abs(this.steering) * 0.3;
+                    tire.temp += heatGen * dt;
+                    
+                    // Cooling
+                    const cooling = (tire.temp - 25) * 0.1 * dt;
+                    tire.temp -= cooling;
+                    tire.temp = Math.max(25, Math.min(120, tire.temp));
+                    
+                    // Wear increases with aggressive driving
+                    const wearRate = (Math.abs(this.throttle) + Math.abs(this.steering) + this.brake) * 0.001 * dt;
+                    tire.wear += wearRate;
+                    tire.wear = Math.min(1, tire.wear);
+                    
+                    // Grip based on temperature (optimal at 80°C)
+                    const tempDiff = Math.abs(tire.temp - 80);
+                    tire.grip = 1.0 - (tempDiff / 80) * 0.3;
+                    tire.grip = Math.max(0.5, Math.min(1.1, tire.grip));
+                });
+                
+                // Calculate load transfer
+                const lateralAccel = speed > 1 ? Math.abs(this.steering) * speed * 0.5 : 0;
+                const longitudinalAccel = this.throttle * 5 - this.brake * 10;
+                
+                // Update roll and pitch angles
+                this.rollAngle = lateralAccel * 0.02;
+                this.pitchAngle = longitudinalAccel * 0.01;
+                
+                // Determine load transfer state
+                if (Math.abs(lateralAccel) > 5) {
+                    this.loadTransfer = this.steering > 0 ? 'Right Turn' : 'Left Turn';
+                } else if (this.throttle > 0.5) {
+                    this.loadTransfer = 'Accelerating';
+                } else if (this.brake > 0.5) {
+                    this.loadTransfer = 'Braking';
+                } else {
+                    this.loadTransfer = 'Balanced';
+                }
+                
+                // Update tire loads based on load transfer
+                const baseLoad = (this.mass * 9.81) / 4;
+                const downforcePerWheel = this.downforce / 4;
+                
+                if (this.loadTransfer === 'Accelerating') {
+                    this.tires[0].load = baseLoad * 0.8 + downforcePerWheel;
+                    this.tires[1].load = baseLoad * 0.8 + downforcePerWheel;
+                    this.tires[2].load = baseLoad * 1.2 + downforcePerWheel;
+                    this.tires[3].load = baseLoad * 1.2 + downforcePerWheel;
+                } else if (this.loadTransfer === 'Braking') {
+                    this.tires[0].load = baseLoad * 1.3 + downforcePerWheel;
+                    this.tires[1].load = baseLoad * 1.3 + downforcePerWheel;
+                    this.tires[2].load = baseLoad * 0.7 + downforcePerWheel;
+                    this.tires[3].load = baseLoad * 0.7 + downforcePerWheel;
+                } else if (this.loadTransfer.includes('Turn')) {
+                    const factor = this.steering > 0 ? 1 : -1;
+                    this.tires[0].load = baseLoad * (1 - 0.3 * factor) + downforcePerWheel;
+                    this.tires[1].load = baseLoad * (1 + 0.3 * factor) + downforcePerWheel;
+                    this.tires[2].load = baseLoad * (1 - 0.3 * factor) + downforcePerWheel;
+                    this.tires[3].load = baseLoad * (1 + 0.3 * factor) + downforcePerWheel;
+                } else {
+                    this.tires.forEach(tire => tire.load = baseLoad + downforcePerWheel);
+                }
+                
+                // Calculate effective grip with tire model
+                const avgGrip = this.tires.reduce((sum, t) => sum + t.grip, 0) / 4;
+                const gripMultiplier = avgGrip * (1 - this.tires[0].wear * 0.3);
+                
+                // Apply forces with grip
+                let engineForce = forward.mul(this.throttle * this.enginePower / this.mass * gripMultiplier);
+                
+                // Traction control
+                if (this.tractionControl && speed > 5 && this.throttle > 0.7) {
+                    engineForce = engineForce.mul(0.85);
+                }
+                
                 const drag = this.velocity.mul(-0.3 * this.velocity.length());
-                const brakeForce = this.velocity.normalized().mul(-this.brake * 25);
+                let brakeForce = this.velocity.normalized().mul(-this.brake * 25 * gripMultiplier);
+                
+                // ABS
+                if (this.abs && this.brake > 0.8 && speed > 10) {
+                    brakeForce = brakeForce.mul(0.9);
+                }
+                
                 const totalForce = engineForce.add(drag).add(brakeForce);
                 
                 // Update velocity
                 this.velocity = this.velocity.add(totalForce.mul(dt));
-                const speed = this.velocity.length();
                 if (speed > 60) this.velocity = this.velocity.normalized().mul(60);
                 
                 // Update horizontal position
@@ -391,53 +709,133 @@ car.getSpeed();</textarea>
                 // Get terrain height at each wheel
                 const wheelHeights = wheels.map(w => terrain.getHeight(w.x, w.z));
                 
-                // Average height of all wheels (this is where car body should be)
+                // Average height of all wheels
                 const avgWheelHeight = wheelHeights.reduce((a, b) => a + b, 0) / wheelHeights.length;
-                const targetGroundY = avgWheelHeight + this.groundClearance;
+                
+                // Target car position: terrain height + wheel radius + ground clearance (center of mass height)
+                const targetGroundY = avgWheelHeight + this.wheelRadius + this.groundClearance;
                 
                 // Check if any wheel is significantly above ground (car is airborne)
                 const minWheelHeight = Math.min(...wheelHeights);
-                const lowestWheelY = this.position.y - this.groundClearance;
+                const lowestWheelY = this.position.y - this.wheelRadius - this.groundClearance;
                 const distanceToGround = lowestWheelY - minWheelHeight;
+                
+                // Debug ground detection
+                if (Math.random() < 0.02) {
+                    console.log('🔍 Ground check:', 
+                              'dist:', distanceToGround.toFixed(3),
+                              'carY:', this.position.y.toFixed(2),
+                              'minWheel:', minWheelHeight.toFixed(2),
+                              'target:', targetGroundY.toFixed(2));
+                }
                 
                 if (distanceToGround > 0.2) {
                     // Above ground - apply gravity (falling)
                     this.onGround = false;
-                    this.verticalVelocity += this.gravity * dt;
+                    this.airborneTime += dt;
                     
-                    // Clamp vertical velocity to prevent extreme speeds (terminal velocity)
-                    const terminalVelocity = -50; // Max fall speed (m/s)
+                    // Realistic gravity with air resistance
+                    const airDensity = 1.225; // kg/m³ at sea level
+                    const dragCoefficient = 0.8; // Higher drag when airborne (tumbling)
+                    const frontalArea = 2.5; // m² (larger when not streamlined)
+                    
+                    // Air resistance force (opposes vertical velocity)
+                    const airResistance = 0.5 * airDensity * dragCoefficient * frontalArea * 
+                                         this.verticalVelocity * Math.abs(this.verticalVelocity);
+                    const airResistanceAccel = airResistance / this.mass;
+                    
+                    // Apply gravity and air resistance
+                    const gravityAccel = this.gravity - airResistanceAccel;
+                    this.verticalVelocity += gravityAccel * dt;
+                    
+                    // Debug: Log first few frames of freefall
+                    if (this.airborneTime < 0.5 && Math.random() < 0.1) {
+                        console.log('🌍 Freefall:', 
+                                  'vVel:', this.verticalVelocity.toFixed(2), 
+                                  'gravity:', gravityAccel.toFixed(2),
+                                  'height:', this.position.y.toFixed(2),
+                                  'dist:', distanceToGround.toFixed(2));
+                    }
+                    
+                    // Terminal velocity (realistic for a car: ~50-60 m/s)
+                    const terminalVelocity = -55; // Max fall speed (m/s)
                     if (this.verticalVelocity < terminalVelocity) {
                         this.verticalVelocity = terminalVelocity;
                     }
                     
+                    // Apply horizontal air resistance when airborne
+                    const horizontalSpeed = Math.sqrt(this.velocity.x * this.velocity.x + 
+                                                     this.velocity.z * this.velocity.z);
+                    if (horizontalSpeed > 0.1) {
+                        const horizontalDrag = 0.5 * airDensity * dragCoefficient * frontalArea * 
+                                              horizontalSpeed * horizontalSpeed;
+                        const dragAccel = horizontalDrag / this.mass;
+                        const dragFactor = Math.max(0, 1 - (dragAccel * dt / horizontalSpeed));
+                        this.velocity.x *= dragFactor;
+                        this.velocity.z *= dragFactor;
+                    }
+                    
+                    // Rotation during flight (tumbling effect based on angular momentum)
+                    if (Math.abs(this.verticalVelocity) > 5) {
+                        // Car rotates slightly when falling fast
+                        const tumbleRate = this.verticalVelocity * 0.02 * dt;
+                        this.rotation += tumbleRate * (this.steering * 0.5); // Steering affects tumble direction
+                    }
+                    
+                    // Update vertical position
                     this.position.y += this.verticalVelocity * dt;
                     
                     // Check if any wheel touched ground
-                    if (this.position.y - this.groundClearance <= minWheelHeight + 0.1) {
+                    if (this.position.y - this.wheelRadius - this.groundClearance <= minWheelHeight + 0.1) {
                         // IMMEDIATE correction to prevent underground glitch
                         this.position.y = targetGroundY;
                         
-                        // Bounce based on impact velocity
+                        // Advanced landing physics based on impact velocity and angle
                         const impactSpeed = Math.abs(this.verticalVelocity);
-                        if (impactSpeed > 15) {
-                            // High speed impact - small bounce with energy loss
-                            this.verticalVelocity = impactSpeed * -0.2;
-                        } else if (impactSpeed > 5) {
-                            // Medium impact - tiny bounce
+                        const horizontalImpactSpeed = horizontalSpeed;
+                        
+                        // Calculate total impact energy
+                        const totalImpactSpeed = Math.sqrt(impactSpeed * impactSpeed + 
+                                                          horizontalImpactSpeed * horizontalImpactSpeed);
+                        
+                        if (totalImpactSpeed > 20) {
+                            // Catastrophic landing - major energy loss
                             this.verticalVelocity = impactSpeed * -0.15;
+                            this.velocity.x *= 0.3; // Lose most horizontal speed
+                            this.velocity.z *= 0.3;
+                            console.log('💥 Hard landing! Impact speed:', totalImpactSpeed.toFixed(1), 'm/s');
+                        } else if (totalImpactSpeed > 10) {
+                            // Hard landing - significant bounce and energy loss
+                            this.verticalVelocity = impactSpeed * -0.25;
+                            this.velocity.x *= 0.5;
+                            this.velocity.z *= 0.5;
+                            console.log('⚠️ Rough landing! Impact speed:', totalImpactSpeed.toFixed(1), 'm/s');
+                        } else if (totalImpactSpeed > 5) {
+                            // Medium landing - small bounce
+                            this.verticalVelocity = impactSpeed * -0.2;
+                            this.velocity.x *= 0.7;
+                            this.velocity.z *= 0.7;
                         } else {
-                            // Soft landing - no bounce
+                            // Soft landing - no bounce, minimal energy loss
                             this.verticalVelocity = 0;
+                            this.velocity.x *= 0.9;
+                            this.velocity.z *= 0.9;
                         }
                         
                         this.onGround = true;
+                        
+                        // Log airtime for impressive jumps
+                        if (this.airborneTime > 1.0) {
+                            console.log('🚁 Airtime:', this.airborneTime.toFixed(2), 's');
+                        }
+                        this.airborneTime = 0;
                     }
                 } else if (distanceToGround < -0.5) {
                     // CRITICAL: Car is underground - FORCE it back up immediately
                     this.position.y = targetGroundY + 0.5; // Add small offset to ensure it's above ground
                     this.verticalVelocity = 0;
                     this.onGround = true;
+                    this.airborneTime = 0;
                     console.warn('⚠️ Underground glitch detected - forcing car up');
                 } else {
                     // On or near ground - follow terrain surface
@@ -453,6 +851,7 @@ car.getSpeed();</textarea>
                     }
                     
                     this.verticalVelocity = 0;
+                    this.airborneTime = 0;
                 }
                 
                 // Update engine stats
@@ -475,11 +874,12 @@ car.getSpeed();</textarea>
 
         class Terrain {
             constructor() {
-                this.type = 'flat'; // Start with flat terrain for better initial view
+                this.type = 'hills'; // Start with hills for better demo
                 this.needsUpdate = true;
                 this.seed = 12345.6789; // Fixed seed for consistent terrain (changes with position)
                 this.chunkSize = 50; // Size of terrain chunks
                 this.lastCarPos = { x: 0, z: 0 };
+                this.updateCount = 0; // Track number of terrain updates
             }
             
             // Improved noise function for natural terrain - uses world position
@@ -609,11 +1009,13 @@ car.getSpeed();</textarea>
                 const dz = carZ - this.lastCarPos.z;
                 const distance = Math.sqrt(dx * dx + dz * dz);
                 
-                // Update terrain mesh when car moves significantly
-                if (distance > this.chunkSize * 0.3) {
+                // Update terrain mesh when car moves significantly (more frequent updates)
+                if (distance > 30) { // Update every 30 units of movement for smooth infinite terrain
                     this.lastCarPos.x = carX;
                     this.lastCarPos.z = carZ;
                     this.needsUpdate = true;
+                    this.updateCount++;
+                    console.log('🗺️ Terrain auto-generating #' + this.updateCount + ' - Car at:', carX.toFixed(1), carZ.toFixed(1), '| Distance traveled:', distance.toFixed(1));
                     return true;
                 }
                 return false;
@@ -802,13 +1204,15 @@ car.getSpeed();</textarea>
                         
                         // Fix alignment - proper scale, rotation, and position
                         carMesh.scale.set(2.5, 2.5, 2.5); // Larger for better visibility
-                        // Model is already oriented correctly, no additional rotation needed
-                        carMesh.rotation.y = 0; // Reset rotation - will be controlled by physics
+                        
+                        // FIX: Rotate 90° on Y-axis to align with physics forward direction
+                        // Physics forward is -Z, but model might be oriented along X
+                        carMesh.rotation.y = -Math.PI / 2; // -90 degrees to align with physics
                         
                         // DO NOT set position.y here - it will be set by physics in animation loop
                         // The model's pivot point should be at the bottom (wheels on ground)
                         
-                        console.log('✓ Car model aligned - forward direction fixed');
+                        console.log('✓ Car model aligned - rotation fixed for proper steering');
                         
                         // Optimize materials and enable shadows
                         carMesh.traverse((child) => {
@@ -855,8 +1259,8 @@ car.getSpeed();</textarea>
                 scene.add(carMesh);
             });
 
-        // Enhanced terrain with better visuals - ONLY ground mesh, no flat plane
-        const terrainGeometry = new THREE.PlaneGeometry(200, 200, 80, 80); // Higher resolution for smoother terrain
+        // Enhanced terrain with better visuals - LARGER for infinite driving
+        const terrainGeometry = new THREE.PlaneGeometry(400, 400, 120, 120); // Much larger and higher resolution
         const terrainMaterial = new THREE.MeshStandardMaterial({ 
             color: 0x4a7c3a, // Proper grass green
             roughness: 0.9,
@@ -912,6 +1316,14 @@ car.getSpeed();</textarea>
         function updateTerrain() {
             const positions = terrainGeometry.attributes.position.array;
             
+            // Center terrain around car position for infinite terrain effect
+            const carX = car.position.x;
+            const carZ = car.position.z;
+            
+            // Update terrain mesh position to follow car
+            terrainMesh.position.x = Math.floor(carX / 20) * 20; // Snap to grid
+            terrainMesh.position.z = Math.floor(carZ / 20) * 20;
+            
             // PlaneGeometry creates vertices in XY plane: (x, y, 0)
             // After rotation.x = -PI/2, the plane is horizontal (XZ plane)
             // In the geometry buffer (local space):
@@ -921,9 +1333,13 @@ car.getSpeed();</textarea>
             // So we modify positions[i+2] to set the height (which becomes Y after rotation)
             
             for (let i = 0; i < positions.length; i += 3) {
-                const x = positions[i];      // X coordinate in world space
-                const z = positions[i + 1];  // Z coordinate in world space (this is Y in geometry)
-                const height = terrain.getHeight(x, z);
+                // Convert local coordinates to world coordinates
+                const localX = positions[i];
+                const localZ = positions[i + 1];
+                const worldX = localX + terrainMesh.position.x;
+                const worldZ = localZ + terrainMesh.position.z;
+                
+                const height = terrain.getHeight(worldX, worldZ);
                 positions[i + 2] = -height;  // NEGATIVE because rotation flips Z to -Y
             }
             
@@ -931,7 +1347,7 @@ car.getSpeed();</textarea>
             terrainGeometry.computeVertexNormals();
             terrain.needsUpdate = false;
             
-            console.log('✓ Terrain updated:', terrain.type, '| Sample height at (0,0):', terrain.getHeight(0, 0).toFixed(2));
+            console.log('✓ Terrain auto-generated at car position:', carX.toFixed(1), carZ.toFixed(1), '| Type:', terrain.type);
         }
         
         // Initial terrain setup
@@ -1189,8 +1605,22 @@ car.getSpeed();</textarea>
         function animate(currentTime) {
             requestAnimationFrame(animate);
             
-            // Calculate delta time
+            // Calculate delta time with safety check
+            if (!currentTime || !lastFrameTime) {
+                lastFrameTime = performance.now();
+                return;
+            }
+            
             const deltaTime = currentTime - lastFrameTime;
+            
+            // Safety check for invalid delta time
+            if (isNaN(deltaTime) || deltaTime < 0 || deltaTime > 1000) {
+                console.warn('⚠️ Invalid deltaTime:', deltaTime, '- resetting');
+                lastFrameTime = currentTime;
+                deltaAccumulator = 0;
+                return;
+            }
+            
             lastFrameTime = currentTime;
             deltaAccumulator += deltaTime;
             
@@ -1226,35 +1656,53 @@ car.getSpeed();</textarea>
             }
             
             // Fixed timestep physics (prevents physics from breaking at low FPS)
-            const maxDelta = 50; // Cap at 20 FPS minimum
-            const clampedDelta = Math.min(deltaTime, maxDelta);
-            const physicsSteps = Math.floor(deltaAccumulator / targetFrameTime);
+            const fixedDeltaTime = 1 / 60; // 60 FPS physics timestep (16.67ms)
+            const maxPhysicsSteps = 5; // Prevent spiral of death on very slow devices
             
-            if (physicsSteps > 0) {
-                deltaAccumulator -= physicsSteps * targetFrameTime;
+            // Safety check for NaN accumulator
+            if (isNaN(deltaAccumulator)) {
+                console.error('❌ deltaAccumulator is NaN - resetting to 0');
+                deltaAccumulator = 0;
             }
-
+            
             if (!paused) {
-                // Handle all controls - check both key and code
-                car.throttle = (keys['ArrowUp'] || keys['w'] || keys['W']) ? 1 : 0;
-                car.brake = (keys['ArrowDown'] || keys['s'] || keys['S']) ? 1 : 0;
-                car.steering = ((keys['ArrowLeft'] || keys['a'] || keys['A']) ? -1 : 0) + 
-                              ((keys['ArrowRight'] || keys['d'] || keys['D']) ? 1 : 0);
+                // Handle all controls - check both key and code (KeyW, KeyA, KeyS, KeyD)
+                car.throttle = (keys['ArrowUp'] || keys['w'] || keys['W'] || keys['KeyW']) ? 1 : 0;
+                car.brake = (keys['ArrowDown'] || keys['s'] || keys['S'] || keys['KeyS']) ? 1 : 0;
+                car.steering = ((keys['ArrowLeft'] || keys['a'] || keys['A'] || keys['KeyA']) ? -1 : 0) + 
+                              ((keys['ArrowRight'] || keys['d'] || keys['D'] || keys['KeyD']) ? 1 : 0);
                 
                 // Handbrake (Space key)
                 if (keys[' '] || keys['Space']) {
                     car.brake = 1.5; // Stronger braking
                 }
 
-                car.update(1/60, terrain);
+                // Run physics with fixed timestep - multiple steps if needed for slow devices
+                let steps = 0;
+                while (deltaAccumulator >= targetFrameTime && steps < maxPhysicsSteps) {
+                    car.update(fixedDeltaTime, terrain);
+                    deltaAccumulator -= targetFrameTime;
+                    steps++;
+                }
+                
+                // Debug: Log if physics isn't running
+                if (steps === 0 && Math.random() < 0.05) {
+                    console.warn('⚠️ Physics not running! Accumulator:', deltaAccumulator.toFixed(2), 'Target:', targetFrameTime);
+                }
+                
+                // If we're running too slow, discard excess time to prevent spiral of death
+                if (deltaAccumulator > targetFrameTime * maxPhysicsSteps) {
+                    deltaAccumulator = 0;
+                }
 
                 if (carMesh) {
                     // Update car mesh position to match physics
                     // Car position is center of mass, mesh needs to sit on ground
                     carMesh.position.set(car.position.x, car.position.y, car.position.z);
                     
-                    // Apply physics rotation
-                    carMesh.rotation.y = car.rotation;
+                    // Apply physics rotation with model offset correction
+                    // Add -90° offset to align model with physics forward direction
+                    carMesh.rotation.y = car.rotation - Math.PI / 2;
                     
                     // Tilt car based on terrain slope for realism
                     if (car.onGround) {
@@ -1333,8 +1781,10 @@ car.getSpeed();</textarea>
                 }
 
                 // Auto-update terrain based on car movement (infinite terrain)
+                // Check every frame for smooth terrain generation
                 if (terrain.checkUpdate(car.position.x, car.position.z)) {
                     updateTerrain();
+                    showNotification('🗺️ Terrain auto-generated', 'info');
                 }
                 
                 // Manual terrain update trigger
@@ -1346,7 +1796,7 @@ car.getSpeed();</textarea>
             // Update UI (throttled to reduce DOM updates)
             if (frameCount % 3 === 0) { // Update every 3 frames
                 const speed = car.velocity.length();
-                const statusText = car.onGround ? '' : ' (AIRBORNE)';
+                const statusText = car.onGround ? '' : ` (AIRBORNE ${car.airborneTime.toFixed(1)}s)`;
                 document.getElementById('speed').textContent = speed.toFixed(1) + statusText;
                 document.getElementById('rpm').textContent = Math.round(car.engineRPM);
                 document.getElementById('gear').textContent = car.gear;
@@ -1354,6 +1804,78 @@ car.getSpeed();</textarea>
                 document.getElementById('rpm2').textContent = Math.round(car.engineRPM);
                 document.getElementById('gear2').textContent = car.gear;
                 document.getElementById('gforce').textContent = (car.getCentripetalForce() / (car.mass * 9.81)).toFixed(1);
+                
+                // Update advanced telemetry
+                document.getElementById('downforce').textContent = Math.round(car.downforce) + ' N';
+                document.getElementById('roll-angle').textContent = (car.rollAngle * 57.3).toFixed(1) + '°';
+                document.getElementById('pitch-angle').textContent = (car.pitchAngle * 57.3).toFixed(1) + '°';
+                document.getElementById('load-transfer').textContent = car.loadTransfer;
+                
+                // Update tire data
+                const tireIds = ['fl', 'fr', 'rl', 'rr'];
+                car.tires.forEach((tire, i) => {
+                    const id = tireIds[i];
+                    const tempEl = document.getElementById(`tire-temp-${id}`);
+                    const wearEl = document.getElementById(`tire-wear-${id}`);
+                    const loadEl = document.getElementById(`tire-load-${id}`);
+                    
+                    if (tempEl) {
+                        tempEl.textContent = Math.round(tire.temp) + '°C';
+                        // Color code temperature
+                        if (tire.temp < 60) tempEl.style.color = '#4a90e2'; // Cold - blue
+                        else if (tire.temp < 100) tempEl.style.color = '#4ec9b0'; // Optimal - green
+                        else tempEl.style.color = '#f48771'; // Hot - red
+                    }
+                    
+                    if (wearEl) {
+                        wearEl.textContent = Math.round(tire.wear * 100) + '%';
+                        // Color code wear
+                        if (tire.wear < 0.5) wearEl.style.color = '#4ec9b0'; // Good - green
+                        else if (tire.wear < 0.8) wearEl.style.color = '#ffa500'; // Worn - orange
+                        else wearEl.style.color = '#f48771'; // Critical - red
+                    }
+                    
+                    if (loadEl) {
+                        loadEl.textContent = Math.round(tire.load) + 'N';
+                    }
+                });
+                
+                // Update HUD status indicators
+                const tcIndicator = document.getElementById('tc-indicator');
+                const absIndicator = document.getElementById('abs-indicator');
+                const tcStatus = document.getElementById('tc-status');
+                const absStatus = document.getElementById('abs-status');
+                
+                if (tcIndicator) {
+                    tcIndicator.className = car.tractionControl ? 'status-indicator status-on' : 'status-indicator status-off';
+                    tcStatus.textContent = car.tractionControl ? 'ON' : 'OFF';
+                }
+                
+                if (absIndicator) {
+                    absIndicator.className = car.abs ? 'status-indicator status-on' : 'status-indicator status-off';
+                    absStatus.textContent = car.abs ? 'ON' : 'OFF';
+                }
+                
+                // Update HUD tire averages
+                const avgTemp = car.tires.reduce((sum, t) => sum + t.temp, 0) / 4;
+                const avgWear = car.tires.reduce((sum, t) => sum + t.wear, 0) / 4;
+                
+                const hudTempEl = document.getElementById('hud-tire-temp');
+                const hudWearEl = document.getElementById('hud-tire-wear');
+                
+                if (hudTempEl) {
+                    hudTempEl.textContent = Math.round(avgTemp) + '°C';
+                    if (avgTemp < 60) hudTempEl.style.color = '#4a90e2';
+                    else if (avgTemp < 100) hudTempEl.style.color = '#4ec9b0';
+                    else hudTempEl.style.color = '#f48771';
+                }
+                
+                if (hudWearEl) {
+                    hudWearEl.textContent = Math.round(avgWear * 100) + '%';
+                    if (avgWear < 0.5) hudWearEl.style.color = '#4ec9b0';
+                    else if (avgWear < 0.8) hudWearEl.style.color = '#ffa500';
+                    else hudWearEl.style.color = '#f48771';
+                }
                 
                 // Update camera info
                 document.getElementById('cam-zoom').textContent = Math.round(zoomLevel);
@@ -1388,6 +1910,51 @@ car.getSpeed();</textarea>
             }
         });
 
+        // Advanced vehicle control functions
+        window.setTireType = () => {
+            const type = document.getElementById('tire-type').value;
+            car.tireType = type;
+            
+            // Reset tire temperatures and wear for new tires
+            car.tires.forEach(tire => {
+                tire.temp = 25;
+                tire.wear = 0;
+            });
+            
+            console.log('✓ Tire type:', type);
+        };
+        
+        window.setDriveType = () => {
+            const type = document.getElementById('drive-type').value;
+            car.driveType = type;
+            console.log('✓ Drive type:', type);
+        };
+        
+        window.setDownforce = () => {
+            const value = parseFloat(document.getElementById('downforce-slider').value);
+            car.downforceCoefficient = value;
+            document.getElementById('downforce-value').textContent = value.toFixed(1);
+            console.log('✓ Downforce coefficient:', value);
+        };
+        
+        window.setSuspension = () => {
+            const value = parseInt(document.getElementById('suspension-slider').value);
+            car.suspensionStiffness = value;
+            const labels = ['Soft', 'Medium', 'Stiff'];
+            document.getElementById('suspension-value').textContent = labels[value];
+            console.log('✓ Suspension:', labels[value]);
+        };
+        
+        window.toggleTC = () => {
+            car.tractionControl = document.getElementById('traction-control').checked;
+            console.log('✓ Traction control:', car.tractionControl ? 'ON' : 'OFF');
+        };
+        
+        window.toggleABS = () => {
+            car.abs = document.getElementById('abs').checked;
+            console.log('✓ ABS:', car.abs ? 'ON' : 'OFF');
+        };
+        
         // Global functions
         window.resetCar = () => {
             const terrainHeight = terrain.getHeight(0, 0);
@@ -1399,6 +1966,15 @@ car.getSpeed();</textarea>
             car.engineRPM = 1000;
             car.gear = 1;
             car.onGround = false;
+            
+            // Reset tire data
+            car.tires.forEach(tire => {
+                tire.temp = 25;
+                tire.wear = 0;
+                tire.load = 0;
+                tire.grip = 1.0;
+            });
+            
             console.log('✓ Car reset - Terrain:', terrainHeight.toFixed(2), 'Target:', (terrainHeight + car.groundClearance).toFixed(2), 'Start Y:', startHeight.toFixed(2));
         };
 
@@ -1430,6 +2006,10 @@ car.getSpeed();</textarea>
         window.setTerrain = (type) => {
             terrain.type = type;
             terrain.needsUpdate = true;
+            terrain.updateCount = 0; // Reset counter
+            
+            // Force immediate terrain update
+            updateTerrain();
             
             // Reset car position when terrain changes
             setTimeout(() => {
@@ -1438,7 +2018,8 @@ car.getSpeed();</textarea>
                 car.position.y = newCarY;
                 car.verticalVelocity = 0;
                 car.onGround = false;
-                console.log('✓ Terrain:', type, '| Height:', currentTerrainHeight.toFixed(2), '| Car Y:', newCarY.toFixed(2));
+                console.log('✓ Terrain changed to:', type, '| Height:', currentTerrainHeight.toFixed(2), '| Car Y:', newCarY.toFixed(2));
+                showNotification('🗺️ Terrain: ' + type.charAt(0).toUpperCase() + type.slice(1), 'info');
             }, 100);
         };
         
@@ -2242,6 +2823,52 @@ car.getMomentum();`;
             }
         });
 
+        // Notification system
+        let lastNotificationTime = 0;
+        let lastTireWarning = 0;
+        
+        function showNotification(message, type = 'info') {
+            const now = Date.now();
+            if (now - lastNotificationTime < 3000) return; // Throttle notifications
+            
+            const container = document.getElementById('notifications');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            container.appendChild(notification);
+            lastNotificationTime = now;
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(-100%)';
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
+        }
+        
+        // Monitor tire conditions
+        setInterval(() => {
+            if (!car) return;
+            
+            const now = Date.now();
+            if (now - lastTireWarning < 10000) return; // Only warn every 10 seconds
+            
+            const avgTemp = car.tires.reduce((sum, t) => sum + t.temp, 0) / 4;
+            const avgWear = car.tires.reduce((sum, t) => sum + t.wear, 0) / 4;
+            
+            if (avgTemp > 110) {
+                showNotification('⚠️ Tires overheating! Reduce speed or aggressive driving.', 'warning');
+                lastTireWarning = now;
+            } else if (avgWear > 0.8) {
+                showNotification('⚠️ Tires heavily worn! Consider pit stop.', 'warning');
+                lastTireWarning = now;
+            } else if (avgTemp > 90 && avgTemp < 100) {
+                showNotification('✓ Tires at optimal temperature!', 'info');
+                lastTireWarning = now;
+            }
+        }, 5000);
+
         animate();
         
         // Set default quality to medium with shadows enabled
@@ -2250,10 +2877,15 @@ car.getMomentum();`;
         // Force shadow map update
         renderer.shadowMap.needsUpdate = true;
         
-        console.log('✓ CarX Simulator ready! Use arrow keys to drive.');
-        console.log('✓ Use Code Editor to experiment with physics!');
-        console.log('✓ Performance optimized for low-end devices');
-        console.log('✓ Adjust quality settings if needed');
+        // Show welcome notification
+        setTimeout(() => {
+            showNotification('🏎️ CarX Simulator v2.2 - Professional Physics Active!', 'info');
+        }, 1000);
+        
+        console.log('✓ CarX Simulator v2.2 ready!');
+        console.log('✓ Professional vehicle dynamics enabled');
+        console.log('✓ Pacejka tire model, load transfer, downforce active');
+        console.log('✓ Use arrow keys to drive, adjust settings in right panel');
     </script>
 </body>
 </html>

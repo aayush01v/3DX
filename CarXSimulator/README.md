@@ -4,11 +4,36 @@ A high-performance C++ physics engine for realistic car simulation with advanced
 
 ## ✨ Features
 
-### Physics Engine
-- **Realistic Car Dynamics** - Advanced force calculations, friction, and momentum
-- **Terrain Following** - Smooth ground contact with proper collision detection
-- **Gravity Simulation** - Adjustable gravity (Earth, Moon, Mars, Jupiter)
-- **Free Fall Physics** - Realistic airborne behavior and landing
+### 🚗 Professional Car Physics (v2.2 - Industry Standard! 🏎️)
+- **Pacejka Tire Model** - Industry-standard Magic Formula (from svenlr/car-physics-pacejka)
+- **Load Transfer** - Realistic weight distribution during acceleration/braking/cornering
+- **Aerodynamic Downforce** - Speed-dependent grip enhancement
+- **Tire Temperature** - Heat generation and cooling simulation
+- **Tire Wear** - Long-term degradation modeling
+- **Advanced Suspension** - Multi-body dynamics with anti-roll bars (from Project Chrono)
+- **Perfect Ground Contact** - No more falling through terrain or floating
+- **Smooth Acceleration** - Realistic torque curve with proper gear ratios
+- **Effective Braking** - Speed-dependent brake force with ABS
+- **Natural Steering** - Speed-dependent response, no over-sensitivity
+- **Drivetrain Options** - FWD, RWD, AWD with torque distribution
+- **Driver Assistance** - Traction control and anti-lock braking systems (ABS)
+- **Differential Systems** - Open, limited-slip, and locked differential options
+- **Professional Grade** - Based on TUMFTM/Open-Car-Dynamics principles
+
+### 🏔️ Enhanced Terrain System
+- **Advanced Generation** - Multi-octave Perlin noise for natural landscapes
+- **Multiple Presets** - Flat, hills, mountains, valleys, and racetracks
+- **Dynamic Features** - Add obstacles, ramps, and deformations at runtime
+- **Material Zones** - Define areas with different friction (ice, mud, asphalt)
+- **Terrain Tools** - Smoothing, erosion simulation, and normal caching
+- **Performance Optimized** - Cached normals and collision detection
+
+### 💻 Enhanced Coding Support
+- **Structured API** - 20+ commands with autocomplete and help system
+- **Variable System** - Define and use variables in scripts
+- **Batch Execution** - Run multi-line scripts with comments
+- **Command Help** - Built-in documentation for all API functions
+- **Output Feedback** - Clear success/error messages for all operations
 
 ### Visualization
 - **3D Graphics** - Real-time rendering with Three.js and WebGL
@@ -83,6 +108,14 @@ cmake --build .
 
 ## 📖 Documentation
 
+### 🆕 Latest Updates (v2.2)
+- **[ADVANCED_VEHICLE_DYNAMICS.md](docs/ADVANCED_VEHICLE_DYNAMICS.md)** - ⭐ Professional vehicle dynamics guide
+- **[PHYSICS_FIXES.md](docs/PHYSICS_FIXES.md)** - Complete physics documentation
+
+### Documentation
+- **[IMPROVEMENTS.md](docs/IMPROVEMENTS.md)** - Detailed guide to all new features
+- **[QUICK_START.md](docs/QUICK_START.md)** - Get started in 5 minutes
+
 ### Essential Guides
 - **[Preview README](preview/README.md)** - How to run the web demo
 
@@ -136,11 +169,32 @@ car.setVelocity(Vector3(0, 0, velocity));
 car.getEnergy();
 ```
 
-### Available Commands
-- `setMass(kg)`, `setEnginePower(W)`, `setGravity(m/s²)`
-- `applyForce(x,y,z)`, `setVelocity(x,y,z)`, `setPosition(x,y,z)`
-- `getSpeed()`, `getPosition()`, `getVelocity()`, `getMass()`
-- `getEnergy()`, `getMomentum()`, `reset()`
+### Available Commands (20+ Total)
+
+**Car Control:**
+- `createCar x y z [mass] [power]` - Create new car
+- `setThrottle amount` - Set throttle (-1 to 1)
+- `setSteering angle` - Set steering (-1 to 1)
+- `setBrake amount` - Set brake (0 to 1)
+- `setTractionControl 0/1` - Enable/disable TC
+- `setABS 0/1` - Enable/disable ABS
+
+**Terrain:**
+- `loadTerrainPreset type` - Load preset (flat, hills, mountains, valley, racetrack)
+- `generateTerrain amplitude frequency` - Custom procedural terrain
+- `addObstacle x z radius height` - Add obstacle
+- `addRamp x z width length height` - Add jump ramp
+- `smoothTerrain [iterations]` - Smooth terrain
+
+**Car Properties:**
+- `setCarMass kg` - Set car mass
+- `setTireGrip coefficient` - Set tire grip (0.5-2.0)
+
+**Physics:**
+- `setGravity x y z` - Set gravity vector
+- `reset` - Reset simulation
+
+See [IMPROVEMENTS.md](docs/IMPROVEMENTS.md) for complete API reference.
 
 ### Built-in Experiments (18 total)
 - **Kinematics**: Equations of motion, projectile motion, relative velocity
@@ -275,8 +329,9 @@ Download pre-built binaries for Windows, macOS, and Linux from [Releases](https:
 
 ## 🎯 Project Status
 
-- ✅ Web preview fully functional
-- ✅ Physics engine complete
+- ✅ **v2.2 Professional Physics** - Pacejka tires, load transfer, downforce
+- ✅ Web preview fully functional with all features
+- ✅ Physics engine complete with industry-standard models
 - ✅ Interactive camera system
 - ✅ Code editor with 18 experiments
 - ✅ Cross-platform ready
@@ -284,6 +339,26 @@ Download pre-built binaries for Windows, macOS, and Linux from [Releases](https:
 - ✅ CI/CD pipeline
 - 🚧 Native desktop builds (in progress)
 - 🚧 Mobile apps (in progress)
+
+---
+
+## 📊 Quick Reference
+
+### Terrain Types
+- **Flat** - Testing and drag racing
+- **Hills** - Rally and scenic driving  
+- **Mountains** - Extreme off-road
+- **Valley** - Downhill racing
+- **Racetrack** - Circuit racing with banking
+
+### Vehicle Configurations
+
+**Racing Car**: 1000kg, 200kW, racing tires (1.5 grip), stiff suspension
+**Rally Car**: 1150kg, 180kW, all-terrain tires (1.1 grip), soft suspension  
+**Truck**: 2500kg, 180kW, off-road tires (0.9 grip), medium suspension
+
+### Friction Values
+- Ice: 0.3-0.4 | Wet: 0.5-0.6 | Dry: 0.8-1.0 | Asphalt: 1.0-1.2 | Racing: 1.3-1.5
 
 ---
 

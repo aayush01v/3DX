@@ -129,17 +129,11 @@ void PhysicsEngine::updateCar(Car* car, float dt) {
     float cosR = std::cos(rotation);
     float sinR = std::sin(rotation);
     
-    // Calculate wheel positions
-    Vector3 wheelPositions[4] = {
-        Vector3(pos.x + wheelTrack/2 * cosR - wheelBase/2 * sinR, 0, 
-                pos.z - wheelTrack/2 * sinR - wheelBase/2 * cosR), // FR
-        Vector3(pos.x - wheelTrack/2 * cosR - wheelBase/2 * sinR, 0, 
-                pos.z + wheelTrack/2 * sinR - wheelBase/2 * cosR), // FL
-        Vector3(pos.x + wheelTrack/2 * cosR + wheelBase/2 * sinR, 0, 
-                pos.z - wheelTrack/2 * sinR + wheelBase/2 * cosR), // RR
-        Vector3(pos.x - wheelTrack/2 * cosR + wheelBase/2 * sinR, 0, 
-                pos.z + wheelTrack/2 * sinR + wheelBase/2 * cosR)  // RL
-    };
+    // Calculate wheel positions - use actual wheel positions from car
+    Vector3 wheelPositions[4];
+    for (int i = 0; i < 4; ++i) {
+        wheelPositions[i] = car->getWheelPosition(i);
+    }
     
     // Sample terrain at each wheel with caching
     float wheelHeights[4];
@@ -166,8 +160,8 @@ void PhysicsEngine::updateCar(Car* car, float dt) {
         car->applyForce(dragForce);
     }
     
-    // Update car physics
-    car->update(dt, terrainNormal, avgHeight, terrainFriction);
+    // Update car physics with individual wheel heights
+    car->updateWithWheelHeights(dt, terrainNormal, wheelHeights, terrainFriction);
 }
 
 float PhysicsEngine::getTerrainHeight(float x, float z) {
