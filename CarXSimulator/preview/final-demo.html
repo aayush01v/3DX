@@ -1431,10 +1431,11 @@ car.getSpeed();</textarea>
                 const x = carPos.x + Math.cos(angle) * distance;
                 const z = carPos.z + Math.sin(angle) * distance;
                 
-                // Trees should be at y=0 because terrain mesh is at y=0 with heights baked into vertices
-                // The terrain.getHeight() returns logical height but visual mesh is at y=0
+                // Sample terrain height so trunks always touch the ground surface
+                const height = terrain.getHeight(x, z);
+
                 const tree = treeModel.clone(true); // Deep clone to ensure independent positioning
-                tree.position.set(x, 0, z); // Place at ground plane (y=0)
+                tree.position.set(x, height, z); // Place at ground surface height
                 tree.rotation.y = Math.random() * Math.PI * 2;
                 const scale = 1.0 + Math.random() * 0.5; // Random scale 1.0-1.5 (normal size)
                 tree.scale.set(scale, scale, scale);
