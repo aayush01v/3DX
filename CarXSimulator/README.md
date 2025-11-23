@@ -287,7 +287,6 @@ cd preview && netlify deploy --prod
 
 # Or deploy the prebuilt preview to Vercel from the repo root
 npm run deploy:vercel
-# (vercel.json uses the version 2 static-build config with distDir=preview)
 ```
 
 **Docker:**
