@@ -61,6 +61,10 @@ npm run deploy:vercel
 vercel --prebuilt --prod --confirm
 ```
 
+> **Note:** `vercel.json` is preconfigured to serve the static `preview/` folder
+> (rewriting `/` to `/final-demo.html`) and skips unnecessary installs/builds so
+> you can deploy the prebuilt preview assets directly.
+
 > The repo is preconfigured for static hosting on Vercel: `vercel.json` points to the
 > `preview/` output, rewrites `/` to `final-demo.html`, and sets cache headers for
 > large assets like `.glb` and `.exr` models.
