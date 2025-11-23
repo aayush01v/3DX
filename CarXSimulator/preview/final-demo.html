@@ -2628,6 +2628,27 @@ car.getSpeed();</textarea>
                                         result += `<span style="color: #4ec9b0;">✓ Gravity = ${Math.abs(value).toFixed(2)} m/s²</span><br>`;
                                     }
                                 }
+                                else if (trimmed.includes('car.drive') || trimmed.startsWith('drive')) {
+                                    const match = trimmed.match(/drive\(([^)]*)\)/);
+                                    if (match) {
+                                        const args = match[1].split(',').map(expr => {
+                                            if (!expr.trim()) return undefined;
+                                            const evalFunc = new Function(...Object.keys(context), `return ${expr.trim()};`);
+                                            return evalFunc(...Object.values(context));
+                                        });
+
+                                        const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+                                        const throttle = clamp(args[0] ?? 0, -1, 1);
+                                        const steering = clamp(args[1] ?? 0, -1, 1);
+                                        const brake = clamp(args[2] ?? 0, 0, 1);
+
+                                        car.throttle = throttle;
+                                        car.steering = steering;
+                                        car.brake = brake;
+
+                                        result += `<span style="color: #4ec9b0;">✓ Driving: throttle=${throttle.toFixed(2)}, steering=${steering.toFixed(2)}, brake=${brake.toFixed(2)}</span><br>`;
+                                    }
+                                }
                                 // Getters
                                 else if (trimmed.includes('car.getSpeed') || trimmed.includes('getSpeed')) {
                                     const speed = car.velocity.length();
