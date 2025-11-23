@@ -1,12 +1,16 @@
 {
   "version": 2,
-  "framework": "static",
-  "installCommand": "echo 'Skipping package install for static preview deployment.'",
-  "buildCommand": "echo 'Using prebuilt preview/ assets for deployment.'",
-  "outputDirectory": "preview",
-  "trailingSlash": false,
-  "rewrites": [
-    { "source": "/", "destination": "/final-demo.html" }
+  "builds": [
+    {
+      "src": "preview/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/final-demo.html"
+    }
   ],
   "headers": [
     {
