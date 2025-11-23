@@ -1,3 +1,7 @@
+<div align="center">
+<img width="1268" height="600" alt="Banner" src="https://i.postimg.cc/NMXrGqY9/Capture.png" />
+</div>
+
 # 🏎️ CarX Physics Simulator
 
 A high-performance C++ physics engine for realistic car simulation with advanced kinematics, terrain interaction, and real-time 3D visualization.
