@@ -1,32 +1,73 @@
 #include "Terrain.h"
 #include <cmath>
 #include <algorithm>
+#include <chrono>
 
 Terrain::Terrain(int width, int depth) 
     : width(width), depth(depth), curvature(0.0f), scale(1.0f), type(TerrainType::FLAT) {
     heights.resize(width * depth, 0.0f);
     friction.resize(width * depth, 1.0f);
+    
+    // Initialize with random seed
+    auto now = std::chrono::high_resolution_clock::now();
+    seed = static_cast<unsigned int>(now.time_since_epoch().count());
+    rng.seed(seed);
+}
+
+// Advanced noise function for natural terrain
+float Terrain::noise(float x, float z) const {
+    float n = std::sin(x * 12.9898f + z * 78.233f + seed) * 43758.5453f;
+    return n - std::floor(n);
+}
+
+float Terrain::smoothNoise(float x, float z) const {
+    int intX = static_cast<int>(std::floor(x));
+    int intZ = static_cast<int>(std::floor(z));
+    float fracX = x - intX;
+    float fracZ = z - intZ;
+    
+    // Get noise at corners
+    float v1 = noise(static_cast<float>(intX), static_cast<float>(intZ));
+    float v2 = noise(static_cast<float>(intX + 1), static_cast<float>(intZ));
+    float v3 = noise(static_cast<float>(intX), static_cast<float>(intZ + 1));
+    float v4 = noise(static_cast<float>(intX + 1), static_cast<float>(intZ + 1));
+    
+    // Smooth interpolation
+    float i1 = interpolate(v1, v2, fracX);
+    float i2 = interpolate(v3, v4, fracX);
+    return interpolate(i1, i2, fracZ);
+}
+
+float Terrain::interpolate(float a, float b, float t) const {
+    float ft = t * 3.14159265f;
+    float f = (1.0f - std::cos(ft)) * 0.5f;
+    return a * (1.0f - f) + b * f;
+}
+
+float Terrain::perlinNoise(float x, float z, int octaves, float persistence, float noiseScale) const {
+    float total = 0.0f;
+    float frequency = 1.0f;
+    float amplitude = 1.0f;
+    float maxValue = 0.0f;
+    
+    for (int i = 0; i < octaves; ++i) {
+        total += smoothNoise(x * frequency / noiseScale, z * frequency / noiseScale) * amplitude;
+        maxValue += amplitude;
+        amplitude *= persistence;
+        frequency *= 2.0f;
+    }
+    
+    return total / maxValue;
 }
 
 void Terrain::generateProcedural(float amplitude, float frequency) {
     for (int z = 0; z < depth; ++z) {
         for (int x = 0; x < width; ++x) {
-            float fx = x * frequency / width;
-            float fz = z * frequency / depth;
+            float worldX = (x - width / 2.0f) * scale;
+            float worldZ = (z - depth / 2.0f) * scale;
             
-            // Multi-octave noise
-            float height = 0.0f;
-            float amp = amplitude;
-            float freq = frequency;
-            
-            for (int octave = 0; octave < 4; ++octave) {
-                height += amp * (
-                    std::sin(fx * freq) * std::cos(fz * freq) +
-                    0.5f * std::sin(fx * freq * 2.0f) * std::cos(fz * freq * 2.0f)
-                );
-                amp *= 0.5f;
-                freq *= 2.0f;
-            }
+            // Use advanced Perlin noise
+            float height = perlinNoise(worldX, worldZ, 4, 0.5f, 30.0f) * amplitude;
             
             heights[z * width + x] = height;
             
@@ -47,11 +88,47 @@ void Terrain::generateByType(TerrainType terrainType) {
             break;
             
         case TerrainType::HILLS:
-            generateProcedural(3.0f, 2.0f);
+            for (int z = 0; z < depth; ++z) {
+                for (int x = 0; x < width; ++x) {
+                    float worldX = (x - width / 2.0f) * scale;
+                    float worldZ = (z - depth / 2.0f) * scale;
+                    
+                    // Gentle rolling hills with multiple frequencies
+                    float baseHeight = perlinNoise(worldX, worldZ, 4, 0.5f, 30.0f) * 5.0f;
+                    float detail = std::sin(worldX / 15.0f) * std::cos(worldZ / 15.0f) * 2.0f;
+                    float microDetail = perlinNoise(worldX, worldZ, 2, 0.3f, 10.0f) * 1.0f;
+                    
+                    heights[z * width + x] = baseHeight + detail + microDetail;
+                    friction[z * width + x] = 0.95f;
+                }
+            }
             break;
             
         case TerrainType::MOUNTAINS:
-            generateProcedural(15.0f, 1.5f);
+            for (int z = 0; z < depth; ++z) {
+                for (int x = 0; x < width; ++x) {
+                    float worldX = (x - width / 2.0f) * scale;
+                    float worldZ = (z - depth / 2.0f) * scale;
+                    
+                    // Dramatic mountain peaks with valleys
+                    float baseNoise = perlinNoise(worldX, worldZ, 6, 0.6f, 40.0f);
+                    float mountains = std::pow(baseNoise, 2.0f) * 20.0f;
+                    
+                    // Add ridges
+                    float ridgeX = std::abs(std::sin(worldX / 25.0f)) * 8.0f;
+                    float ridgeZ = std::abs(std::cos(worldZ / 25.0f)) * 8.0f;
+                    float ridges = std::min(ridgeX, ridgeZ);
+                    
+                    // Add valleys
+                    float valley = std::sin(worldX / 30.0f) * std::cos(worldZ / 30.0f) * -5.0f;
+                    
+                    // Combine with detail
+                    float detail = perlinNoise(worldX, worldZ, 3, 0.4f, 15.0f) * 3.0f;
+                    
+                    heights[z * width + x] = mountains + ridges + valley + detail;
+                    friction[z * width + x] = 0.85f; // Less grip on steep mountains
+                }
+            }
             break;
             
         case TerrainType::VALLEY:
@@ -67,7 +144,7 @@ void Terrain::generateByType(TerrainType terrainType) {
             break;
             
         case TerrainType::RACETRACK:
-            generateRaceTrack(30.0f, 10.0f, 0.2f);
+            generateRaceTrack(40.0f, 15.0f, 0.2f);
             break;
             
         default:
@@ -76,30 +153,57 @@ void Terrain::generateByType(TerrainType terrainType) {
 }
 
 void Terrain::generateRaceTrack(float radius, float trackWidth, float banking) {
-    Vector3 center(width / 2.0f, 0, depth / 2.0f);
+    float centerX = 0.0f;
+    float centerZ = 0.0f;
     
     for (int z = 0; z < depth; ++z) {
         for (int x = 0; x < width; ++x) {
-            float dx = x - center.x;
-            float dz = z - center.z;
-            float distFromCenter = std::sqrt(dx * dx + dz * dz);
+            float worldX = (x - width / 2.0f) * scale;
+            float worldZ = (z - depth / 2.0f) * scale;
             
-            // Distance from track centerline
-            float distFromTrack = std::abs(distFromCenter - radius);
+            float dx = worldX - centerX;
+            float dz = worldZ - centerZ;
+            float dist = std::sqrt(dx * dx + dz * dz);
+            float distFromTrack = std::abs(dist - radius);
             
             if (distFromTrack < trackWidth / 2.0f) {
-                // On track - apply banking
-                float bankAmount = (distFromCenter - radius) / (trackWidth / 2.0f);
-                heights[z * width + x] = bankAmount * banking * 5.0f;
-                friction[z * width + x] = 1.2f;  // High grip on track
+                // On the track - add banking for turns
+                float angle = std::atan2(dz - centerZ, dx - centerX);
+                float bankingEffect = std::sin(angle * 4.0f) * 2.0f;
+                
+                // Smooth track surface with slight elevation changes
+                float elevation = std::sin(angle * 2.0f) * 1.5f;
+                
+                // Track surface (slightly lower than surroundings)
+                float trackDepth = -1.0f + (distFromTrack / (trackWidth / 2.0f)) * 1.0f;
+                
+                heights[z * width + x] = trackDepth + bankingEffect + elevation;
+                friction[z * width + x] = 1.3f;  // High grip on track
+            } else if (distFromTrack < trackWidth / 2.0f + 5.0f) {
+                // Track edge/shoulder - smooth transition
+                float edgeFactor = (distFromTrack - trackWidth / 2.0f) / 5.0f;
+                float trackHeight = -1.0f;
+                float surroundHeight = perlinNoise(worldX, worldZ, 3, 0.4f, 20.0f) * 2.0f;
+                heights[z * width + x] = trackHeight * (1.0f - edgeFactor) + surroundHeight * edgeFactor;
+                friction[z * width + x] = 1.0f - edgeFactor * 0.4f;
             } else {
-                // Off track - rough terrain
-                heights[z * width + x] = perlinNoise(x * 0.1f, z * 0.1f) * 2.0f;
-                friction[z * width + x] = 0.6f;  // Low grip off track
+                // Outside track - natural terrain
+                heights[z * width + x] = perlinNoise(worldX, worldZ, 4, 0.5f, 25.0f) * 3.0f;
+                friction[z * width + x] = 0.7f;  // Lower grip off track
             }
         }
     }
     type = TerrainType::RACETRACK;
+}
+
+void Terrain::regenerate() {
+    // Generate new random seed
+    auto now = std::chrono::high_resolution_clock::now();
+    seed = static_cast<unsigned int>(now.time_since_epoch().count());
+    rng.seed(seed);
+    
+    // Regenerate current terrain type
+    generateByType(type);
 }
 
 float Terrain::getHeight(float x, float z) const {
@@ -201,46 +305,4 @@ float Terrain::smoothNoise(int x, int z) const {
 }
 
 
-float Terrain::getFriction(float x, float z) const {
-    int ix = static_cast<int>((x / scale) + width / 2);
-    int iz = static_cast<int>((z / scale) + depth / 2);
-    
-    if (ix < 0 || ix >= width || iz < 0 || iz >= depth) {
-        return 1.0f;
-    }
-    
-    return friction[iz * width + ix];
-}
-
-bool Terrain::isInBounds(float x, float z) const {
-    int ix = static_cast<int>((x / scale) + width / 2);
-    int iz = static_cast<int>((z / scale) + depth / 2);
-    
-    return ix >= 0 && ix < width && iz >= 0 && iz < depth;
-}
-
-float Terrain::perlinNoise(float x, float z) const {
-    // Simple noise implementation
-    int xi = static_cast<int>(x);
-    int zi = static_cast<int>(z);
-    
-    float fx = x - xi;
-    float fz = z - zi;
-    
-    float n00 = smoothNoise(xi, zi);
-    float n10 = smoothNoise(xi + 1, zi);
-    float n01 = smoothNoise(xi, zi + 1);
-    float n11 = smoothNoise(xi + 1, zi + 1);
-    
-    float nx0 = n00 * (1 - fx) + n10 * fx;
-    float nx1 = n01 * (1 - fx) + n11 * fx;
-    
-    return nx0 * (1 - fz) + nx1 * fz;
-}
-
-float Terrain::smoothNoise(int x, int z) const {
-    // Simple pseudo-random noise
-    int n = x + z * 57;
-    n = (n << 13) ^ n;
-    return (1.0f - ((n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff) / 1073741824.0f);
-}
+// Remove duplicate definitions - already defined above

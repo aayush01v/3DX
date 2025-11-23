@@ -178,6 +178,9 @@
                     <button onclick="setTerrain('mountains')">Mountains</button>
                     <button onclick="setTerrain('track')">Race Track</button>
                 </div>
+                <div style="margin-top: 10px; font-size: 11px; color: #666;">
+                    ✨ Terrain auto-generates as you drive
+                </div>
             </div>
             
             <div class="section">
@@ -319,7 +322,7 @@ car.getSpeed();</textarea>
                 // Start at terrain height + offset
                 const initialHeight = 10; // Will be adjusted after terrain loads
                 this.position = new Vec3(0, initialHeight, 0);
-                this.velocity = new Vec3();
+                this.velocity = new Vec3(0, 0, -5); // Initial velocity: 5 m/s forward
                 this.verticalVelocity = 0; // Separate vertical velocity
                 this.rotation = 0;
                 this.mass = 1200;
@@ -331,86 +334,130 @@ car.getSpeed();</textarea>
                 this.gear = 1;
                 this.gravity = -9.81; // Default Earth gravity
                 this.onGround = false;
-                this.groundClearance = 1.0; // Distance from physics center to ground (car height)
+                this.groundClearance = 0.8; // Distance from physics center to wheels (half car height)
+                this.wheelRadius = 0.4; // Wheel size
             }
 
             update(dt, terrain) {
-                // Get actual terrain height at car's current position
-                const terrainHeight = terrain.getHeight(this.position.x, this.position.z);
-                const targetGroundY = terrainHeight + this.groundClearance;
+                // Horizontal physics first
+                const forward = new Vec3(-Math.sin(this.rotation), 0, -Math.cos(this.rotation));
+                const right = new Vec3(Math.cos(this.rotation), 0, -Math.sin(this.rotation));
                 
-                // Vertical physics (free fall / ground contact)
-                const tolerance = 0.05; // Small tolerance for ground detection
+                // Apply forces
+                const engineForce = forward.mul(this.throttle * this.enginePower / this.mass);
+                const drag = this.velocity.mul(-0.3 * this.velocity.length());
+                const brakeForce = this.velocity.normalized().mul(-this.brake * 25);
+                const totalForce = engineForce.add(drag).add(brakeForce);
                 
-                if (this.position.y > targetGroundY + tolerance) {
-                    // In air - apply gravity
+                // Update velocity
+                this.velocity = this.velocity.add(totalForce.mul(dt));
+                const speed = this.velocity.length();
+                if (speed > 60) this.velocity = this.velocity.normalized().mul(60);
+                
+                // Update horizontal position
+                this.position.x += this.velocity.x * dt;
+                this.position.z += this.velocity.z * dt;
+                
+                // Steering
+                if (speed > 0.5 && Math.abs(this.steering) > 0.01) {
+                    const forwardSpeed = this.velocity.dot(forward);
+                    if (Math.abs(forwardSpeed) > 0.5) {
+                        const turnRadius = 2.5 / Math.tan(this.steering * 0.6);
+                        const angularSpeed = forwardSpeed / turnRadius;
+                        this.rotation += angularSpeed * dt;
+                    }
+                }
+                
+                // Multi-point terrain collision (4 wheels)
+                // Calculate wheel positions in world space
+                const wheelBase = 2.6; // Distance between front and rear wheels
+                const wheelTrack = 1.8; // Distance between left and right wheels
+                
+                const cosR = Math.cos(this.rotation);
+                const sinR = Math.sin(this.rotation);
+                
+                // Four wheel positions relative to car center
+                const wheels = [
+                    { x: this.position.x + wheelTrack/2 * cosR - wheelBase/2 * sinR, 
+                      z: this.position.z - wheelTrack/2 * sinR - wheelBase/2 * cosR }, // Front-right
+                    { x: this.position.x - wheelTrack/2 * cosR - wheelBase/2 * sinR, 
+                      z: this.position.z + wheelTrack/2 * sinR - wheelBase/2 * cosR }, // Front-left
+                    { x: this.position.x + wheelTrack/2 * cosR + wheelBase/2 * sinR, 
+                      z: this.position.z - wheelTrack/2 * sinR + wheelBase/2 * cosR }, // Rear-right
+                    { x: this.position.x - wheelTrack/2 * cosR + wheelBase/2 * sinR, 
+                      z: this.position.z + wheelTrack/2 * sinR + wheelBase/2 * cosR }  // Rear-left
+                ];
+                
+                // Get terrain height at each wheel
+                const wheelHeights = wheels.map(w => terrain.getHeight(w.x, w.z));
+                
+                // Average height of all wheels (this is where car body should be)
+                const avgWheelHeight = wheelHeights.reduce((a, b) => a + b, 0) / wheelHeights.length;
+                const targetGroundY = avgWheelHeight + this.groundClearance;
+                
+                // Check if any wheel is significantly above ground (car is airborne)
+                const minWheelHeight = Math.min(...wheelHeights);
+                const lowestWheelY = this.position.y - this.groundClearance;
+                const distanceToGround = lowestWheelY - minWheelHeight;
+                
+                if (distanceToGround > 0.2) {
+                    // Above ground - apply gravity (falling)
                     this.onGround = false;
                     this.verticalVelocity += this.gravity * dt;
+                    
+                    // Clamp vertical velocity to prevent extreme speeds (terminal velocity)
+                    const terminalVelocity = -50; // Max fall speed (m/s)
+                    if (this.verticalVelocity < terminalVelocity) {
+                        this.verticalVelocity = terminalVelocity;
+                    }
+                    
                     this.position.y += this.verticalVelocity * dt;
                     
-                    // Check if landed
-                    if (this.position.y <= targetGroundY) {
+                    // Check if any wheel touched ground
+                    if (this.position.y - this.groundClearance <= minWheelHeight + 0.1) {
+                        // IMMEDIATE correction to prevent underground glitch
                         this.position.y = targetGroundY;
-                        // Dampen vertical velocity on impact
-                        this.verticalVelocity = Math.max(this.verticalVelocity * -0.3, 0);
+                        
+                        // Bounce based on impact velocity
+                        const impactSpeed = Math.abs(this.verticalVelocity);
+                        if (impactSpeed > 15) {
+                            // High speed impact - small bounce with energy loss
+                            this.verticalVelocity = impactSpeed * -0.2;
+                        } else if (impactSpeed > 5) {
+                            // Medium impact - tiny bounce
+                            this.verticalVelocity = impactSpeed * -0.15;
+                        } else {
+                            // Soft landing - no bounce
+                            this.verticalVelocity = 0;
+                        }
+                        
                         this.onGround = true;
                     }
+                } else if (distanceToGround < -0.5) {
+                    // CRITICAL: Car is underground - FORCE it back up immediately
+                    this.position.y = targetGroundY + 0.5; // Add small offset to ensure it's above ground
+                    this.verticalVelocity = 0;
+                    this.onGround = true;
+                    console.warn('⚠️ Underground glitch detected - forcing car up');
                 } else {
-                    // On ground - follow terrain exactly
+                    // On or near ground - follow terrain surface
                     this.onGround = true;
                     
-                    // Smooth terrain following
+                    // Smooth transition to target height
                     const heightDiff = targetGroundY - this.position.y;
-                    if (Math.abs(heightDiff) < 2.0) {
-                        // Small height changes - follow smoothly
-                        this.position.y += heightDiff * 0.3; // Smooth interpolation
+                    if (Math.abs(heightDiff) > 0.01) {
+                        // Gradually adjust to terrain (prevents jitter)
+                        this.position.y += heightDiff * 0.3;
                     } else {
-                        // Large drop - start falling
-                        this.onGround = false;
-                        this.verticalVelocity = 0;
+                        this.position.y = targetGroundY;
                     }
                     
-                    // Reset vertical velocity when on ground
-                    if (this.onGround) {
-                        this.verticalVelocity = 0;
-                    }
+                    this.verticalVelocity = 0;
                 }
                 
-                // Horizontal physics (only when on ground)
-                if (this.onGround) {
-                    // FIXED: Forward direction matches model orientation (rotated 180°)
-                    // Model faces -Z direction after rotation, so forward is negative Z
-                    const forward = new Vec3(-Math.sin(this.rotation), 0, -Math.cos(this.rotation));
-                    const right = new Vec3(Math.cos(this.rotation), 0, -Math.sin(this.rotation));
-                    
-                    const engineForce = forward.mul(this.throttle * this.enginePower / this.mass);
-                    const drag = this.velocity.mul(-0.3 * this.velocity.length());
-                    const brakeForce = this.velocity.normalized().mul(-this.brake * 25);
-
-                    const totalForce = engineForce.add(drag).add(brakeForce);
-                    this.velocity = this.velocity.add(totalForce.mul(dt));
-
-                    const speed = this.velocity.length();
-                    if (speed > 60) this.velocity = this.velocity.normalized().mul(60);
-
-                    this.position = this.position.add(this.velocity.mul(dt));
-
-                    // Steering
-                    if (speed > 0.5 && Math.abs(this.steering) > 0.01) {
-                        const forwardSpeed = this.velocity.dot(forward);
-                        if (Math.abs(forwardSpeed) > 0.5) {
-                            const turnRadius = 2.5 / Math.tan(this.steering * 0.6);
-                            const angularSpeed = forwardSpeed / turnRadius;
-                            this.rotation += angularSpeed * dt;
-                        }
-                    }
-
-                    this.engineRPM = 1000 + speed * 200;
-                    this.gear = Math.min(6, Math.floor(speed / 10) + 1);
-                } else {
-                    // In air - maintain horizontal velocity
-                    this.position = this.position.add(this.velocity.mul(dt * 0.5)); // Reduced air control
-                }
+                // Update engine stats
+                this.engineRPM = 1000 + speed * 200;
+                this.gear = Math.min(6, Math.floor(speed / 10) + 1);
             }
 
             getCentripetalForce() {
@@ -430,23 +477,146 @@ car.getSpeed();</textarea>
             constructor() {
                 this.type = 'flat'; // Start with flat terrain for better initial view
                 this.needsUpdate = true;
+                this.seed = 12345.6789; // Fixed seed for consistent terrain (changes with position)
+                this.chunkSize = 50; // Size of terrain chunks
+                this.lastCarPos = { x: 0, z: 0 };
+            }
+            
+            // Improved noise function for natural terrain - uses world position
+            noise(x, z) {
+                // Deterministic noise based on world position (not random seed)
+                // This ensures terrain is consistent at any position
+                const n = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
+                return n - Math.floor(n);
+            }
+            
+            // Smooth noise using interpolation
+            smoothNoise(x, z) {
+                const intX = Math.floor(x);
+                const intZ = Math.floor(z);
+                const fracX = x - intX;
+                const fracZ = z - intZ;
+                
+                // Get noise at corners
+                const v1 = this.noise(intX, intZ);
+                const v2 = this.noise(intX + 1, intZ);
+                const v3 = this.noise(intX, intZ + 1);
+                const v4 = this.noise(intX + 1, intZ + 1);
+                
+                // Smooth interpolation (cosine)
+                const i1 = this.interpolate(v1, v2, fracX);
+                const i2 = this.interpolate(v3, v4, fracX);
+                return this.interpolate(i1, i2, fracZ);
+            }
+            
+            interpolate(a, b, t) {
+                const ft = t * Math.PI;
+                const f = (1 - Math.cos(ft)) * 0.5;
+                return a * (1 - f) + b * f;
+            }
+            
+            // Perlin-like noise with multiple octaves
+            perlinNoise(x, z, octaves, persistence, scale) {
+                let total = 0;
+                let frequency = 1;
+                let amplitude = 1;
+                let maxValue = 0;
+                
+                for (let i = 0; i < octaves; i++) {
+                    total += this.smoothNoise(x * frequency / scale, z * frequency / scale) * amplitude;
+                    maxValue += amplitude;
+                    amplitude *= persistence;
+                    frequency *= 2;
+                }
+                
+                return total / maxValue;
             }
 
             getHeight(x, z) {
-                const fx = x / 20;
-                const fz = z / 20;
-                
                 switch(this.type) {
-                    case 'flat': return 0;
-                    case 'hills': return 3 * (Math.sin(fx * 2) * Math.cos(fz * 2) + 0.5 * Math.sin(fx * 4) * Math.cos(fz * 4));
-                    case 'mountains': return 10 * (Math.sin(fx) * Math.cos(fz) + 0.5 * Math.sin(fx * 2) * Math.cos(fz * 2));
-                    case 'track': {
-                        const dist = Math.sqrt(x * x + z * z);
-                        const trackDist = Math.abs(dist - 25);
-                        return trackDist < 5 ? -trackDist * 0.5 : Math.sin(fx * 5) * Math.cos(fz * 5) * 0.5;
+                    case 'flat':
+                        return 0;
+                    
+                    case 'hills': {
+                        // Gentle rolling hills with multiple frequencies
+                        const baseHeight = this.perlinNoise(x, z, 4, 0.5, 30) * 5;
+                        const detail = Math.sin(x / 15) * Math.cos(z / 15) * 2;
+                        const microDetail = this.perlinNoise(x, z, 2, 0.3, 10) * 1;
+                        return baseHeight + detail + microDetail;
                     }
-                    default: return 0;
+                    
+                    case 'mountains': {
+                        // Dramatic mountain peaks with valleys
+                        const baseNoise = this.perlinNoise(x, z, 6, 0.6, 40);
+                        const mountains = Math.pow(baseNoise, 2) * 20; // Squared for sharper peaks
+                        
+                        // Add ridges
+                        const ridgeX = Math.abs(Math.sin(x / 25)) * 8;
+                        const ridgeZ = Math.abs(Math.cos(z / 25)) * 8;
+                        const ridges = Math.min(ridgeX, ridgeZ);
+                        
+                        // Add valleys
+                        const valley = Math.sin(x / 30) * Math.cos(z / 30) * -5;
+                        
+                        // Combine with detail
+                        const detail = this.perlinNoise(x, z, 3, 0.4, 15) * 3;
+                        
+                        return mountains + ridges + valley + detail;
+                    }
+                    
+                    case 'track': {
+                        // Circular race track with banking
+                        const centerX = 0;
+                        const centerZ = 0;
+                        const trackRadius = 40; // Outer radius
+                        const trackWidth = 15; // Width of track
+                        
+                        const dist = Math.sqrt((x - centerX) ** 2 + (z - centerZ) ** 2);
+                        const distFromTrack = Math.abs(dist - trackRadius);
+                        
+                        if (distFromTrack < trackWidth / 2) {
+                            // On the track - add banking for turns
+                            const angle = Math.atan2(z - centerZ, x - centerX);
+                            const banking = Math.sin(angle * 4) * 2; // Banking on curves
+                            
+                            // Smooth track surface with slight elevation changes
+                            const elevation = Math.sin(angle * 2) * 1.5;
+                            
+                            // Track surface (slightly lower than surroundings)
+                            const trackDepth = -1 + (distFromTrack / (trackWidth / 2)) * 1;
+                            
+                            return trackDepth + banking + elevation;
+                        } else if (distFromTrack < trackWidth / 2 + 5) {
+                            // Track edge/shoulder - smooth transition
+                            const edgeFactor = (distFromTrack - trackWidth / 2) / 5;
+                            const trackHeight = -1;
+                            const surroundHeight = this.perlinNoise(x, z, 3, 0.4, 20) * 2;
+                            return trackHeight * (1 - edgeFactor) + surroundHeight * edgeFactor;
+                        } else {
+                            // Outside track - natural terrain
+                            return this.perlinNoise(x, z, 4, 0.5, 25) * 3;
+                        }
+                    }
+                    
+                    default:
+                        return 0;
                 }
+            }
+            
+            // Check if terrain needs update based on car movement
+            checkUpdate(carX, carZ) {
+                const dx = carX - this.lastCarPos.x;
+                const dz = carZ - this.lastCarPos.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                // Update terrain mesh when car moves significantly
+                if (distance > this.chunkSize * 0.3) {
+                    this.lastCarPos.x = carX;
+                    this.lastCarPos.z = carZ;
+                    this.needsUpdate = true;
+                    return true;
+                }
+                return false;
             }
         }
 
@@ -685,14 +855,14 @@ car.getSpeed();</textarea>
                 scene.add(carMesh);
             });
 
-        // Enhanced terrain with better visuals
-        const terrainGeometry = new THREE.PlaneGeometry(200, 200, 60, 60);
+        // Enhanced terrain with better visuals - ONLY ground mesh, no flat plane
+        const terrainGeometry = new THREE.PlaneGeometry(200, 200, 80, 80); // Higher resolution for smoother terrain
         const terrainMaterial = new THREE.MeshStandardMaterial({ 
             color: 0x4a7c3a, // Proper grass green
             roughness: 0.9,
             metalness: 0.0,
             flatShading: false,
-            side: THREE.DoubleSide // Visible from both sides
+            side: THREE.FrontSide // Only visible from top (no double-sided)
         });
         const terrainMesh = new THREE.Mesh(terrainGeometry, terrainMaterial);
         terrainMesh.rotation.x = -Math.PI / 2; // Rotate to horizontal
@@ -701,13 +871,7 @@ car.getSpeed();</textarea>
         terrainMesh.castShadow = false;
         scene.add(terrainMesh);
 
-        // Enhanced grid with better visuals
-        const gridHelper = new THREE.GridHelper(200, 40, 0x667eea, 0x555555);
-        gridHelper.position.y = 0.05;
-        gridHelper.material.opacity = 0.25;
-        gridHelper.material.transparent = true;
-        gridHelper.material.depthWrite = false; // Prevent z-fighting
-        scene.add(gridHelper);
+        // NO GRID - Only the terrain mesh is visible
 
         // Force arrows
         const arrowHelper1 = new THREE.ArrowHelper(
@@ -747,17 +911,27 @@ car.getSpeed();</textarea>
 
         function updateTerrain() {
             const positions = terrainGeometry.attributes.position.array;
+            
+            // PlaneGeometry creates vertices in XY plane: (x, y, 0)
+            // After rotation.x = -PI/2, the plane is horizontal (XZ plane)
+            // In the geometry buffer (local space):
+            //   positions[i]   = x (stays as X in world)
+            //   positions[i+1] = y (becomes Z in world after rotation)
+            //   positions[i+2] = z (becomes -Y in world after rotation)
+            // So we modify positions[i+2] to set the height (which becomes Y after rotation)
+            
             for (let i = 0; i < positions.length; i += 3) {
-                const x = positions[i];
-                const z = positions[i + 1];
+                const x = positions[i];      // X coordinate in world space
+                const z = positions[i + 1];  // Z coordinate in world space (this is Y in geometry)
                 const height = terrain.getHeight(x, z);
-                positions[i + 2] = height;
+                positions[i + 2] = -height;  // NEGATIVE because rotation flips Z to -Y
             }
+            
             terrainGeometry.attributes.position.needsUpdate = true;
             terrainGeometry.computeVertexNormals();
             terrain.needsUpdate = false;
             
-            console.log('✓ Terrain updated:', terrain.type);
+            console.log('✓ Terrain updated:', terrain.type, '| Sample height at (0,0):', terrain.getHeight(0, 0).toFixed(2));
         }
         
         // Initial terrain setup
@@ -1158,7 +1332,15 @@ car.getSpeed();</textarea>
                     debugSphere.position.set(car.position.x, terrainHeight, car.position.z);
                 }
 
-                if (terrain.needsUpdate) updateTerrain();
+                // Auto-update terrain based on car movement (infinite terrain)
+                if (terrain.checkUpdate(car.position.x, car.position.z)) {
+                    updateTerrain();
+                }
+                
+                // Manual terrain update trigger
+                if (terrain.needsUpdate) {
+                    updateTerrain();
+                }
             }
 
             // Update UI (throttled to reduce DOM updates)
@@ -1209,7 +1391,7 @@ car.getSpeed();</textarea>
         // Global functions
         window.resetCar = () => {
             const terrainHeight = terrain.getHeight(0, 0);
-            const startHeight = terrainHeight + car.groundClearance + 5; // 5 units above ground
+            const startHeight = terrainHeight + car.groundClearance + 2; // 2 units above ground for gentle drop
             car.position = new Vec3(0, startHeight, 0);
             car.velocity = new Vec3();
             car.verticalVelocity = 0;
@@ -1217,7 +1399,7 @@ car.getSpeed();</textarea>
             car.engineRPM = 1000;
             car.gear = 1;
             car.onGround = false;
-            console.log('✓ Car reset - Terrain:', terrainHeight.toFixed(2), 'Car Y:', startHeight.toFixed(2));
+            console.log('✓ Car reset - Terrain:', terrainHeight.toFixed(2), 'Target:', (terrainHeight + car.groundClearance).toFixed(2), 'Start Y:', startHeight.toFixed(2));
         };
 
         window.togglePhysics = () => {
@@ -1296,11 +1478,11 @@ car.getSpeed();</textarea>
                             car, terrain, Vec3,
                             console: {
                                 log: (...args) => {
-                                    result += `<span style="color: #dcdcaa;">${args.join(' ')}</span>\n`;
+                                    result += `<span style="color: #dcdcaa;">${args.join(' ')}</span><br>`;
                                 }
                             },
                             print: (...args) => {
-                                result += `<span style="color: #dcdcaa;">${args.join(' ')}</span>\n`;
+                                result += `<span style="color: #dcdcaa;">${args.join(' ')}</span><br>`;
                             },
                             Math, // Full Math library
                             ...userVariables // Include user variables
@@ -1310,112 +1492,162 @@ car.getSpeed();</textarea>
                         const func = new Function(...Object.keys(executionContext), code);
                         func(...Object.values(executionContext));
                         
-                        if (!result) result = '<span style="color: #4ec9b0;">✓ Code executed successfully!</span>\n';
+                        if (!result) result = '<span style="color: #4ec9b0;">✓ Code executed successfully!</span><br>';
                     } catch (err) {
-                        result = `<span style="color: #f48771;">❌ Error: ${err.message}</span>\n`;
+                        result = `<span style="color: #f48771;">❌ Error: ${err.message}</span><br>`;
                     }
                 } else {
-                    // Parse and execute code line by line (C++/Python style)
-                    const lines = code.split('\n').filter(l => l.trim() && !l.trim().startsWith('//') && !l.trim().startsWith('#'));
-                    let lineNum = 0;
-                    
-                    lines.forEach(line => {
-                        lineNum++;
-                        line = line.trim();
-                    
+                    // C++/Python style - Full expression evaluation with variables
                     try {
-                        // Enhanced command parsing
-                        if (line.includes('setMass')) {
-                            const match = line.match(/setMass\((\d+\.?\d*)\)/);
-                            if (match) {
-                                car.mass = parseFloat(match[1]);
-                                result += `<span style="color: #4ec9b0;">✓ Line ${lineNum}: Mass = ${match[1]} kg</span>\n`;
+                        // Create safe evaluation context
+                        const context = {
+                            car, terrain, Vec3,
+                            sin: Math.sin,
+                            cos: Math.cos,
+                            tan: Math.tan,
+                            sqrt: Math.sqrt,
+                            pow: Math.pow,
+                            abs: Math.abs,
+                            atan: Math.atan,
+                            PI: Math.PI,
+                            ...userVariables
+                        };
+                        
+                        // Parse and execute code
+                        const lines = code.split('\n');
+                        let lineNum = 0;
+                        
+                        lines.forEach(line => {
+                            lineNum++;
+                            const trimmed = line.trim();
+                            
+                            // Skip empty lines and comments
+                            if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('#')) {
+                                return;
                             }
-                        }
-                        else if (line.includes('setEnginePower')) {
-                            const match = line.match(/setEnginePower\((\d+\.?\d*)\)/);
-                            if (match) {
-                                car.enginePower = parseFloat(match[1]);
-                                result += `<span style="color: #4ec9b0;">✓ Line ${lineNum}: Power = ${(match[1]/1000).toFixed(0)} kW</span>\n`;
+                            
+                            try {
+                                // Variable declaration (float, int, double)
+                                if (/^(float|int|double)\s+(\w+)\s*=\s*(.+);?$/.test(trimmed)) {
+                                    const match = trimmed.match(/^(float|int|double)\s+(\w+)\s*=\s*(.+);?$/);
+                                    const varName = match[2];
+                                    const expression = match[3].replace(/;$/, '');
+                                    
+                                    // Evaluate expression with context
+                                    const evalFunc = new Function(...Object.keys(context), `return ${expression};`);
+                                    const value = evalFunc(...Object.values(context));
+                                    
+                                    context[varName] = value;
+                                    userVariables[varName] = value;
+                                    result += `<span style="color: #9cdcfe;">${varName}</span> = <span style="color: #b5cea8;">${value}</span><br>`;
+                                }
+                                // Car commands with variable support
+                                else if (trimmed.includes('car.setMass') || trimmed.includes('setMass')) {
+                                    const match = trimmed.match(/setMass\(([^)]+)\)/);
+                                    if (match) {
+                                        const evalFunc = new Function(...Object.keys(context), `return ${match[1]};`);
+                                        const value = evalFunc(...Object.values(context));
+                                        car.mass = value;
+                                        result += `<span style="color: #4ec9b0;">✓ Mass = ${value.toFixed(0)} kg</span><br>`;
+                                    }
+                                }
+                                else if (trimmed.includes('car.setEnginePower') || trimmed.includes('setEnginePower')) {
+                                    const match = trimmed.match(/setEnginePower\(([^)]+)\)/);
+                                    if (match) {
+                                        const evalFunc = new Function(...Object.keys(context), `return ${match[1]};`);
+                                        const value = evalFunc(...Object.values(context));
+                                        car.enginePower = value;
+                                        result += `<span style="color: #4ec9b0;">✓ Power = ${(value/1000).toFixed(0)} kW</span><br>`;
+                                    }
+                                }
+                                else if (trimmed.includes('car.applyForce') || trimmed.includes('applyForce')) {
+                                    const match = trimmed.match(/Vector3\(([^)]+)\)/);
+                                    if (match) {
+                                        const args = match[1].split(',').map(expr => {
+                                            const evalFunc = new Function(...Object.keys(context), `return ${expr.trim()};`);
+                                            return evalFunc(...Object.values(context));
+                                        });
+                                        const force = new Vec3(args[0], args[1], args[2]);
+                                        car.velocity = car.velocity.add(force.mul(0.01 / car.mass));
+                                        result += `<span style="color: #4ec9b0;">✓ Force applied (${args[0].toFixed(1)}, ${args[1].toFixed(1)}, ${args[2].toFixed(1)}) N</span><br>`;
+                                    }
+                                }
+                                else if (trimmed.includes('car.setVelocity') || trimmed.includes('setVelocity')) {
+                                    const match = trimmed.match(/Vector3\(([^)]+)\)/);
+                                    if (match) {
+                                        const args = match[1].split(',').map(expr => {
+                                            const evalFunc = new Function(...Object.keys(context), `return ${expr.trim()};`);
+                                            return evalFunc(...Object.values(context));
+                                        });
+                                        car.velocity = new Vec3(args[0], args[1], args[2]);
+                                        result += `<span style="color: #4ec9b0;">✓ Velocity = (${args[0].toFixed(1)}, ${args[1].toFixed(1)}, ${args[2].toFixed(1)}) m/s</span><br>`;
+                                    }
+                                }
+                                else if (trimmed.includes('car.setPosition') || trimmed.includes('setPosition')) {
+                                    const match = trimmed.match(/Vector3\(([^)]+)\)/);
+                                    if (match) {
+                                        const args = match[1].split(',').map(expr => {
+                                            const evalFunc = new Function(...Object.keys(context), `return ${expr.trim()};`);
+                                            return evalFunc(...Object.values(context));
+                                        });
+                                        car.position = new Vec3(args[0], args[1], args[2]);
+                                        result += `<span style="color: #4ec9b0;">✓ Position = (${args[0].toFixed(1)}, ${args[1].toFixed(1)}, ${args[2].toFixed(1)})</span><br>`;
+                                    }
+                                }
+                                else if (trimmed.includes('car.setGravity') || trimmed.includes('setGravity')) {
+                                    const match = trimmed.match(/setGravity\(([^)]+)\)/);
+                                    if (match) {
+                                        const evalFunc = new Function(...Object.keys(context), `return ${match[1]};`);
+                                        const value = evalFunc(...Object.values(context));
+                                        car.gravity = value;
+                                        result += `<span style="color: #4ec9b0;">✓ Gravity = ${Math.abs(value).toFixed(2)} m/s²</span><br>`;
+                                    }
+                                }
+                                // Getters
+                                else if (trimmed.includes('car.getSpeed') || trimmed.includes('getSpeed')) {
+                                    const speed = car.velocity.length();
+                                    result += `<span style="color: #dcdcaa;">→ Speed: ${speed.toFixed(2)} m/s (${(speed * 3.6).toFixed(1)} km/h)</span><br>`;
+                                }
+                                else if (trimmed.includes('car.getPosition') || trimmed.includes('getPosition')) {
+                                    result += `<span style="color: #dcdcaa;">→ Position: (${car.position.x.toFixed(2)}, ${car.position.y.toFixed(2)}, ${car.position.z.toFixed(2)})</span><br>`;
+                                }
+                                else if (trimmed.includes('car.getVelocity') || trimmed.includes('getVelocity')) {
+                                    result += `<span style="color: #dcdcaa;">→ Velocity: (${car.velocity.x.toFixed(2)}, ${car.velocity.y.toFixed(2)}, ${car.velocity.z.toFixed(2)}) m/s</span><br>`;
+                                }
+                                else if (trimmed.includes('car.getGravity') || trimmed.includes('getGravity')) {
+                                    result += `<span style="color: #dcdcaa;">→ Gravity: ${Math.abs(car.gravity).toFixed(2)} m/s²</span><br>`;
+                                }
+                                else if (trimmed.includes('car.getMass') || trimmed.includes('getMass')) {
+                                    result += `<span style="color: #dcdcaa;">→ Mass: ${car.mass} kg</span><br>`;
+                                }
+                                else if (trimmed.includes('car.getEnergy') || trimmed.includes('getEnergy')) {
+                                    const ke = 0.5 * car.mass * car.velocity.length() ** 2;
+                                    const pe = car.mass * Math.abs(car.gravity) * car.position.y;
+                                    result += `<span style="color: #dcdcaa;">→ Kinetic Energy: ${ke.toFixed(0)} J</span><br>`;
+                                    result += `<span style="color: #dcdcaa;">→ Potential Energy: ${pe.toFixed(0)} J</span><br>`;
+                                    result += `<span style="color: #dcdcaa;">→ Total Energy: ${(ke + pe).toFixed(0)} J</span><br>`;
+                                }
+                                else if (trimmed.includes('car.getMomentum') || trimmed.includes('getMomentum')) {
+                                    const p = car.velocity.mul(car.mass);
+                                    result += `<span style="color: #dcdcaa;">→ Momentum: (${p.x.toFixed(0)}, ${p.y.toFixed(0)}, ${p.z.toFixed(0)}) kg⋅m/s</span><br>`;
+                                    result += `<span style="color: #dcdcaa;">→ Magnitude: ${p.length().toFixed(0)} kg⋅m/s</span><br>`;
+                                }
+                                else if (trimmed.includes('reset')) {
+                                    resetCar();
+                                    result += `<span style="color: #4ec9b0;">✓ Car reset</span><br>`;
+                                }
+                                // If line ends with semicolon and doesn't match above, it might be a comment or calculation
+                                else if (trimmed.endsWith(';') || trimmed.includes('//')) {
+                                    // Silent execution or comment
+                                }
+                            } catch (err) {
+                                result += `<span style="color: #f48771;">✗ Line ${lineNum}: ${err.message}</span><br>`;
                             }
-                        }
-                        else if (line.includes('applyForce')) {
-                            const match = line.match(/Vector3\(([^)]+)\)/);
-                            if (match) {
-                                const [x, y, z] = match[1].split(',').map(v => parseFloat(v.trim()));
-                                const force = new Vec3(x, y, z);
-                                car.velocity = car.velocity.add(force.mul(0.01 / car.mass));
-                                result += `<span style="color: #4ec9b0;">✓ Line ${lineNum}: Force applied (${x}, ${y}, ${z}) N</span>\n`;
-                            }
-                        }
-                        else if (line.includes('setVelocity')) {
-                            const match = line.match(/Vector3\(([^)]+)\)/);
-                            if (match) {
-                                const [x, y, z] = match[1].split(',').map(v => parseFloat(v.trim()));
-                                car.velocity = new Vec3(x, y, z);
-                                result += `<span style="color: #4ec9b0;">✓ Line ${lineNum}: Velocity = (${x}, ${y}, ${z}) m/s</span>\n`;
-                            }
-                        }
-                        else if (line.includes('setPosition')) {
-                            const match = line.match(/Vector3\(([^)]+)\)/);
-                            if (match) {
-                                const [x, y, z] = match[1].split(',').map(v => parseFloat(v.trim()));
-                                car.position = new Vec3(x, y, z);
-                                result += `<span style="color: #4ec9b0;">✓ Line ${lineNum}: Position = (${x}, ${y}, ${z})</span>\n`;
-                            }
-                        }
-                        else if (line.includes('getSpeed')) {
-                            const speed = car.velocity.length();
-                            result += `<span style="color: #dcdcaa;">→ Speed: ${speed.toFixed(2)} m/s (${(speed * 3.6).toFixed(1)} km/h)</span>\n`;
-                        }
-                        else if (line.includes('getPosition')) {
-                            result += `<span style="color: #dcdcaa;">→ Position: (${car.position.x.toFixed(2)}, ${car.position.y.toFixed(2)}, ${car.position.z.toFixed(2)})</span>\n`;
-                        }
-                        else if (line.includes('getVelocity')) {
-                            result += `<span style="color: #dcdcaa;">→ Velocity: (${car.velocity.x.toFixed(2)}, ${car.velocity.y.toFixed(2)}, ${car.velocity.z.toFixed(2)}) m/s</span>\n`;
-                        }
-                        else if (line.includes('setGravity')) {
-                            const match = line.match(/setGravity\(([^)]+)\)/);
-                            if (match) {
-                                car.gravity = parseFloat(match[1]);
-                                result += `<span style="color: #4ec9b0;">✓ Line ${lineNum}: Gravity = ${Math.abs(car.gravity).toFixed(2)} m/s²</span>\n`;
-                            }
-                        }
-                        else if (line.includes('getGravity')) {
-                            result += `<span style="color: #dcdcaa;">→ Gravity: ${Math.abs(car.gravity).toFixed(2)} m/s²</span>\n`;
-                        }
-                        else if (line.includes('getMass')) {
-                            result += `<span style="color: #dcdcaa;">→ Mass: ${car.mass} kg</span>\n`;
-                        }
-                        else if (line.includes('getEnergy')) {
-                            const ke = 0.5 * car.mass * car.velocity.length() ** 2;
-                            const pe = car.mass * Math.abs(car.gravity) * car.position.y;
-                            result += `<span style="color: #dcdcaa;">→ Kinetic Energy: ${ke.toFixed(0)} J</span>\n`;
-                            result += `<span style="color: #dcdcaa;">→ Potential Energy: ${pe.toFixed(0)} J</span>\n`;
-                            result += `<span style="color: #dcdcaa;">→ Total Energy: ${(ke + pe).toFixed(0)} J</span>\n`;
-                        }
-                        else if (line.includes('getMomentum')) {
-                            const p = car.velocity.mul(car.mass);
-                            result += `<span style="color: #dcdcaa;">→ Momentum: (${p.x.toFixed(0)}, ${p.y.toFixed(0)}, ${p.z.toFixed(0)}) kg⋅m/s</span>\n`;
-                            result += `<span style="color: #dcdcaa;">→ Magnitude: ${p.length().toFixed(0)} kg⋅m/s</span>\n`;
-                        }
-                        else if (line.includes('reset')) {
-                            resetCar();
-                            result += `<span style="color: #4ec9b0;">✓ Line ${lineNum}: Car reset</span>\n`;
-                        }
-                        else if (line.includes('wait')) {
-                            const match = line.match(/wait\((\d+\.?\d*)\)/);
-                            if (match) {
-                                result += `<span style="color: #808080;">⏱️ Wait ${match[1]}s (simulated)</span>\n`;
-                            }
-                        }
-                        else if (line.trim()) {
-                            result += `<span style="color: #808080;">⚠️ Line ${lineNum}: Unknown command</span>\n`;
-                        }
+                        });
+                        
                     } catch (err) {
-                        result += `<span style="color: #f48771;">✗ Line ${lineNum}: ${err.message}</span>\n`;
+                        result = `<span style="color: #f48771;">❌ Parse Error: ${err.message}</span><br>`;
                     }
-                    });
                 }
                 
                 output.innerHTML = result || '<span style="color: #4ec9b0;">✓ Code executed successfully!</span>';
