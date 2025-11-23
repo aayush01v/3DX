@@ -2030,7 +2030,9 @@ car.getSpeed();</textarea>
             // Update UI (throttled to reduce DOM updates)
             if (frameCount % 3 === 0) { // Update every 3 frames
                 const speed = car.velocity.length();
-                const statusText = car.onGround ? '' : ` (AIRBORNE ${car.airborneTime.toFixed(1)}s)`;
+                // Only show airborne badge after being in the air for a short, noticeable duration
+                const showAirborne = !car.onGround && car.airborneTime > 0.2;
+                const statusText = showAirborne ? ` (AIRBORNE ${car.airborneTime.toFixed(1)}s)` : '';
                 document.getElementById('speed').textContent = speed.toFixed(1) + statusText;
                 document.getElementById('rpm').textContent = Math.round(car.engineRPM);
                 document.getElementById('gear').textContent = car.gear;
