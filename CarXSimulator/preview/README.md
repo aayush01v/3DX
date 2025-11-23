@@ -6,18 +6,21 @@ Interactive 3D physics simulation - no build required!
 
 ### Windows
 ```bash
+:: optional - change port if 8080 is busy
+set PORT=9000
 START_PREVIEW.bat
 ```
 
 ### Linux/macOS
 ```bash
-./START_PREVIEW.sh
+# optional - change port if 8080 is busy
+PORT=9000 ./START_PREVIEW.sh
 ```
 
 ### Manual
 ```bash
-python -m http.server 8080
-# Open: http://localhost:8080/final-demo.html
+PORT=9000 python serve.py  # defaults to 8080 if not set
+# Open: http://localhost:9000/final-demo.html
 ```
 
 ## 📁 Files
@@ -71,6 +74,10 @@ python -m http.server 8080
 **Low FPS?**
 - Change quality to "Low"
 - Close other tabs
+
+**Port already in use?**
+- Set a custom port: `PORT=9000 ./START_PREVIEW.sh`
+- The server will automatically fall back to a free port if the preferred one is busy
 
 **Model not loading?**
 - Check browser console
