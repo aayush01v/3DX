@@ -12,7 +12,7 @@ import http.server
 import os
 import socket
 import socketserver
-from typing import Tuple
+from typing import Tuple, Type
 
 DEFAULT_PORT = 8080
 
@@ -45,9 +45,17 @@ class CORSRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
 
-def get_server(handler_class: type, preferred_port: int) -> Tuple[int, socketserver.TCPServer]:
+class ReusableTCPServer(socketserver.TCPServer):
+    # Allows re-binding to the same port immediately after a previous server exits
+    allow_reuse_address = True
+
+
+def get_server(
+    handler_class: Type[http.server.SimpleHTTPRequestHandler],
+    preferred_port: int,
+) -> Tuple[int, socketserver.TCPServer]:
     try:
-        return preferred_port, socketserver.TCPServer(("", preferred_port), handler_class)
+        return preferred_port, ReusableTCPServer(("", preferred_port), handler_class)
     except OSError as exc:
         if exc.errno != errno.EADDRINUSE:
             raise
@@ -59,7 +67,7 @@ def get_server(handler_class: type, preferred_port: int) -> Tuple[int, socketser
         print(
             f"⚠️  Port {preferred_port} is busy, switching to available port {fallback_port}."
         )
-        return fallback_port, socketserver.TCPServer(("", fallback_port), handler_class)
+        return fallback_port, ReusableTCPServer(("", fallback_port), handler_class)
 
 
 if __name__ == "__main__":
