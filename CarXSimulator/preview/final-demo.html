@@ -244,11 +244,11 @@ car.getSpeed();</textarea>
                 </div>
                 <div id="output" style="background: #1e1e1e; color: #4ec9b0; padding: 12px; border-radius: 5px; margin-top: 10px; font-family: monospace; font-size: 12px; min-height: 80px; max-height: 150px; overflow-y: auto; border: 1px solid #333;">Ready to execute code...</div>
                 <div style="margin-top: 8px; font-size: 11px; color: #888;">
-                    <strong>Full Programming Support:</strong><br>
-                    • Define variables: <code>float x = 10;</code><br>
-                    • Use Math functions: <code>sin(), cos(), sqrt(), pow()</code><br>
-                    • JavaScript mode: Full JS with console.log()<br>
-                    • Commands: setMass(), applyForce(), setVelocity(), getSpeed(), getEnergy(), getMomentum()
+                    <strong>🚀 Enhanced Programming Support:</strong><br>
+                    <strong>JavaScript:</strong> Full ES6+, console.log(), arrays, objects, async/await<br>
+                    <strong>Python:</strong> print(), for loops, range(), if/elif/else, functions<br>
+                    <strong>C++:</strong> Variables, math functions, physics commands<br>
+                    <strong>API:</strong> car.setMass(), car.getSpeed(), car.getEnergy(), car.getMomentum(), car.drive()
                 </div>
             </div>
             
@@ -1461,6 +1461,59 @@ car.getSpeed();</textarea>
         let userVariables = {}; // Store user-defined variables
         let userFunctions = {}; // Store user-defined functions
         
+        // Enhanced API for scripting
+        const CarAPI = {
+            // Setters
+            setMass: (m) => { car.mass = m; return `Mass set to ${m} kg`; },
+            setEnginePower: (p) => { car.enginePower = p; return `Power set to ${(p/1000).toFixed(0)} kW`; },
+            setGravity: (g) => { car.gravity = g; return `Gravity set to ${Math.abs(g).toFixed(2)} m/s²`; },
+            setVelocity: (x, y, z) => { car.velocity = new Vec3(x, y, z); return `Velocity set to (${x}, ${y}, ${z}) m/s`; },
+            setPosition: (x, y, z) => { car.position = new Vec3(x, y, z); return `Position set to (${x}, ${y}, ${z})`; },
+            applyForce: (x, y, z) => { 
+                const force = new Vec3(x, y, z);
+                car.velocity = car.velocity.add(force.mul(0.01 / car.mass));
+                return `Force applied: (${x}, ${y}, ${z}) N`;
+            },
+            
+            // Getters
+            getSpeed: () => car.velocity.length(),
+            getVelocity: () => ({ x: car.velocity.x, y: car.velocity.y, z: car.velocity.z }),
+            getPosition: () => ({ x: car.position.x, y: car.position.y, z: car.position.z }),
+            getMass: () => car.mass,
+            getGravity: () => car.gravity,
+            getRPM: () => car.engineRPM,
+            getGear: () => car.gear,
+            
+            // Physics calculations
+            getEnergy: () => {
+                const ke = 0.5 * car.mass * car.velocity.length() ** 2;
+                const pe = car.mass * Math.abs(car.gravity) * car.position.y;
+                return { kinetic: ke, potential: pe, total: ke + pe };
+            },
+            getMomentum: () => {
+                const p = car.velocity.mul(car.mass);
+                return { x: p.x, y: p.y, z: p.z, magnitude: p.length() };
+            },
+            getAcceleration: () => car.getCentripetalForce() / car.mass,
+            
+            // Control
+            reset: () => { resetCar(); return 'Car reset'; },
+            drive: (throttle, steering, brake = 0) => {
+                car.throttle = throttle;
+                car.steering = steering;
+                car.brake = brake;
+                return `Driving: throttle=${throttle}, steering=${steering}, brake=${brake}`;
+            }
+        };
+        
+        // Python-style print function
+        const pythonPrint = (...args) => {
+            return args.map(arg => {
+                if (typeof arg === 'object') return JSON.stringify(arg);
+                return String(arg);
+            }).join(' ');
+        };
+        
         window.executeCode = () => {
             const code = document.getElementById('code-editor').value;
             const language = document.getElementById('language').value;
@@ -1473,28 +1526,145 @@ car.getSpeed();</textarea>
                 // Full JavaScript execution mode
                 if (language === 'javascript') {
                     try {
-                        // Create execution context with access to car and physics
+                        // Create execution context with enhanced API
                         const executionContext = {
-                            car, terrain, Vec3,
+                            // Car API
+                            car: CarAPI,
+                            
+                            // Direct access to physics objects
+                            _car: car,
+                            _terrain: terrain,
+                            Vec3,
+                            
+                            // Console and print
                             console: {
                                 log: (...args) => {
-                                    result += `<span style="color: #dcdcaa;">${args.join(' ')}</span><br>`;
+                                    result += `<span style="color: #dcdcaa;">${args.map(a => 
+                                        typeof a === 'object' ? JSON.stringify(a, null, 2) : a
+                                    ).join(' ')}</span><br>`;
+                                },
+                                error: (...args) => {
+                                    result += `<span style="color: #f48771;">ERROR: ${args.join(' ')}</span><br>`;
+                                },
+                                warn: (...args) => {
+                                    result += `<span style="color: #ffa500;">WARNING: ${args.join(' ')}</span><br>`;
                                 }
                             },
                             print: (...args) => {
                                 result += `<span style="color: #dcdcaa;">${args.join(' ')}</span><br>`;
                             },
-                            Math, // Full Math library
-                            ...userVariables // Include user variables
+                            
+                            // Math library
+                            Math,
+                            
+                            // Utility functions
+                            sleep: (ms) => new Promise(resolve => setTimeout(resolve, ms)),
+                            range: (start, end, step = 1) => {
+                                const arr = [];
+                                for (let i = start; i < end; i += step) arr.push(i);
+                                return arr;
+                            },
+                            
+                            // User variables
+                            ...userVariables
                         };
                         
                         // Execute code in context
                         const func = new Function(...Object.keys(executionContext), code);
-                        func(...Object.values(executionContext));
+                        const returnValue = func(...Object.values(executionContext));
+                        
+                        // Show return value if exists
+                        if (returnValue !== undefined) {
+                            result += `<span style="color: #569cd6;">→ ${typeof returnValue === 'object' ? 
+                                JSON.stringify(returnValue, null, 2) : returnValue}</span><br>`;
+                        }
                         
                         if (!result) result = '<span style="color: #4ec9b0;">✓ Code executed successfully!</span><br>';
                     } catch (err) {
                         result = `<span style="color: #f48771;">❌ Error: ${err.message}</span><br>`;
+                        result += `<span style="color: #808080;">Stack: ${err.stack}</span><br>`;
+                    }
+                } else if (language === 'python') {
+                    // Python-style execution
+                    try {
+                        // Convert Python syntax to JavaScript
+                        let jsCode = code
+                            // Convert print statements
+                            .replace(/print\((.*?)\)/g, 'print($1)')
+                            // Convert range
+                            .replace(/range\((.*?)\)/g, 'range($1)')
+                            // Convert for loops
+                            .replace(/for\s+(\w+)\s+in\s+range\((.*?)\):/g, 'for (let $1 of range($2)) {')
+                            // Convert if statements
+                            .replace(/if\s+(.*?):/g, 'if ($1) {')
+                            .replace(/elif\s+(.*?):/g, '} else if ($1) {')
+                            .replace(/else:/g, '} else {')
+                            // Convert def to function
+                            .replace(/def\s+(\w+)\((.*?)\):/g, 'function $1($2) {')
+                            // Add closing braces (simple heuristic)
+                            .split('\n').map(line => {
+                                if (line.trim().endsWith(':')) {
+                                    return line.replace(':', ' {');
+                                }
+                                return line;
+                            }).join('\n');
+                        
+                        // Add closing braces for indented blocks
+                        const lines = jsCode.split('\n');
+                        const processed = [];
+                        const indentStack = [0];
+                        
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i];
+                            const indent = line.search(/\S/);
+                            
+                            if (indent === -1) {
+                                processed.push(line);
+                                continue;
+                            }
+                            
+                            while (indentStack[indentStack.length - 1] > indent) {
+                                indentStack.pop();
+                                processed.push(' '.repeat(indentStack[indentStack.length - 1]) + '}');
+                            }
+                            
+                            processed.push(line);
+                            
+                            if (line.trim().includes('{')) {
+                                indentStack.push(indent);
+                            }
+                        }
+                        
+                        // Close remaining blocks
+                        while (indentStack.length > 1) {
+                            indentStack.pop();
+                            processed.push('}');
+                        }
+                        
+                        jsCode = processed.join('\n');
+                        
+                        // Execute as JavaScript
+                        const executionContext = {
+                            car: CarAPI,
+                            print: (...args) => {
+                                result += `<span style="color: #dcdcaa;">${pythonPrint(...args)}</span><br>`;
+                            },
+                            range: (start, end, step = 1) => {
+                                const arr = [];
+                                if (end === undefined) { end = start; start = 0; }
+                                for (let i = start; i < end; i += step) arr.push(i);
+                                return arr;
+                            },
+                            Math,
+                            ...userVariables
+                        };
+                        
+                        const func = new Function(...Object.keys(executionContext), jsCode);
+                        func(...Object.values(executionContext));
+                        
+                        if (!result) result = '<span style="color: #4ec9b0;">✓ Code executed successfully!</span><br>';
+                    } catch (err) {
+                        result = `<span style="color: #f48771;">❌ Python Error: ${err.message}</span><br>`;
                     }
                 } else {
                     // C++/Python style - Full expression evaluation with variables
@@ -1982,26 +2152,93 @@ car.setVelocity(Vector3(0, 0, v_s));`,
             }
         };
 
-        // Language switching
+        // Language switching with enhanced examples
         document.getElementById('language').addEventListener('change', (e) => {
             const lang = e.target.value;
             const editor = document.getElementById('code-editor');
             
             if (lang === 'python') {
-                editor.value = `# Python Physics Code
-car.set_mass(1500)
-car.set_engine_power(200000)
-car.apply_force(Vector3(0, 0, 1000))`;
+                editor.value = `# Python Physics Programming
+# Full Python-style syntax support!
+
+# Variables and calculations
+mass = 1500
+power = 250000
+force = 10000
+
+# Calculate acceleration
+acceleration = force / mass
+print("Acceleration:", acceleration, "m/s²")
+
+# Apply to car
+car.setMass(mass)
+car.setEnginePower(power)
+car.applyForce(0, 0, force)
+
+# Get car state
+speed = car.getSpeed()
+print("Current speed:", speed, "m/s")
+
+# Loop example
+for i in range(5):
+    print("Iteration", i)
+    energy = car.getEnergy()
+    print("Energy:", energy)`;
             } else if (lang === 'javascript') {
-                editor.value = `// JavaScript Physics Code
-car.setMass(1500);
-car.setEnginePower(200000);
-car.applyForce(new Vector3(0, 0, 1000));`;
+                editor.value = `// JavaScript Physics Programming
+// Full ES6+ JavaScript support!
+
+// Variables and calculations
+const mass = 1500;
+const power = 250000;
+const force = 10000;
+
+// Calculate acceleration
+const acceleration = force / mass;
+console.log("Acceleration:", acceleration, "m/s²");
+
+// Apply to car
+car.setMass(mass);
+car.setEnginePower(power);
+car.applyForce(0, 0, force);
+
+// Get car state
+const speed = car.getSpeed();
+console.log("Current speed:", speed, "m/s");
+
+// Array operations
+const forces = [1000, 2000, 3000];
+forces.forEach(f => {
+    console.log("Applying force:", f);
+    car.applyForce(0, 0, f);
+});
+
+// Get energy
+const energy = car.getEnergy();
+console.log("Kinetic:", energy.kinetic, "J");
+console.log("Potential:", energy.potential, "J");
+
+// Return value
+return "Simulation complete!";`;
             } else {
                 editor.value = `// C++ Physics Code
-car.setMass(1500);
-car.setEnginePower(200000);
-car.applyForce(Vector3(0, 0, 1000));`;
+// Variables and calculations
+float mass = 1500;
+float power = 250000;
+float force = 10000;
+
+// Calculate acceleration (F = ma)
+float acceleration = force / mass;
+
+// Apply to car
+car.setMass(mass);
+car.setEnginePower(power);
+car.applyForce(Vector3(0, 0, force));
+
+// Get car state
+car.getSpeed();
+car.getEnergy();
+car.getMomentum();`;
             }
         });
 
