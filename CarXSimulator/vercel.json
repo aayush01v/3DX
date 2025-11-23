@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 2,
   "framework": "static",
   "installCommand": "echo 'Skipping package install for static preview deployment.'",
   "buildCommand": "echo 'Using prebuilt preview/ assets for deployment.'",
