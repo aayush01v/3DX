@@ -6,7 +6,8 @@
   "scripts": {
     "start": "cd preview && python -m http.server 8080",
     "preview": "cd preview && python -m http.server 8080",
-    "build": "mkdir -p build && cd build && cmake .. && cmake --build .",
+    "build": "echo 'Static preview already built; skipping native CMake build.'",
+    "build:native": "mkdir -p build && cd build && cmake .. && cmake --build .",
     "deploy": "netlify deploy --prod --dir=preview"
   },
   "keywords": [
