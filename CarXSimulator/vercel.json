@@ -2,7 +2,23 @@
   "version": 3,
   "buildCommand": "npm run build",
   "outputDirectory": "preview",
+  "trailingSlash": false,
   "rewrites": [
     { "source": "/", "destination": "/final-demo.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)\\.(glb|gltf)$",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    },
+    {
+      "source": "/(.*)\\.(exr|png|jpg|jpeg|gif|svg|webp|js|css)$",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
   ]
 }

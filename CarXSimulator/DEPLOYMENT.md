@@ -54,10 +54,16 @@ netlify deploy --prod
 # Install Vercel CLI
 npm install -g vercel
 
-# Deploy
-cd preview
-vercel --prod
+# Deploy from repository root using the included vercel.json
+npm run deploy:vercel
+
+# Or use the CLI manually
+vercel --prebuilt --prod --confirm
 ```
+
+> The repo is preconfigured for static hosting on Vercel: `vercel.json` points to the
+> `preview/` output, rewrites `/` to `final-demo.html`, and sets cache headers for
+> large assets like `.glb` and `.exr` models.
 
 #### Option B: Self-Hosted Server
 
