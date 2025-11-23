@@ -13,3 +13,4 @@ build-wasm/
 cmake-build-*/
 compile_commands.json
 *.user
+node_modules/
