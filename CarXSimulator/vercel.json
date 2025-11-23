@@ -1,8 +1,53 @@
 {
-  "version": 3,
-  "buildCommand": "npm run build",
-  "outputDirectory": "preview",
-  "rewrites": [
-    { "source": "/", "destination": "/final-demo.html" }
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "preview"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/final-demo.html"
+    }
   ]
+}
+{
+
+  "version": 2,
+
+  "builds": [
+
+    {
+
+      "src": "package.json",
+
+      "use": "@vercel/static-build",
+
+      "config": {
+
+        "distDir": "preview"
+
+      }
+
+    }
+
+  ],
+
+  "routes": [
+
+    {
+
+      "src": "/",
+
+      "dest": "/final-demo.html"
+
+    }
+
+  ]
+
 }
