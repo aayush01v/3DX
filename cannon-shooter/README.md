@@ -1,3 +1,6 @@
+<div align="center">
+<img width="600" height="1268" alt="Banner" src="https://i.ibb.co/S4KbJhVZ/Capture.png" />
+</div>
 # Cannon Shooter
 
 A small 3D physics mini-game built with React, Vite, Three.js, and Rapier. Take aim with the cannon, knock down every glowing target, and track your performance with a polished HUD.
