@@ -1737,6 +1737,9 @@ car.getSpeed();</textarea>
         let fpsHistory = [60, 60, 60, 60, 60]; // Start with good FPS history
         let autoQualityEnabled = false; // Disabled by default to prevent unwanted quality changes
         let lastQualityAdjust = 0;
+        let airborneBadgeVisible = false;
+        let airborneGroundedHold = 0;
+        let lastAirborneDuration = 0;
         
         // Advanced quality settings with performance optimization
         window.setQuality = (quality) => {
@@ -2030,7 +2033,27 @@ car.getSpeed();</textarea>
             // Update UI (throttled to reduce DOM updates)
             if (frameCount % 3 === 0) { // Update every 3 frames
                 const speed = car.velocity.length();
-                const statusText = car.onGround ? '' : ` (AIRBORNE ${car.airborneTime.toFixed(1)}s)`;
+                const deltaSeconds = deltaTime / 1000;
+
+                // Only show airborne badge after being in the air for a short, noticeable duration
+                if (!car.onGround) {
+                    airborneGroundedHold = 0;
+                    lastAirborneDuration = car.airborneTime;
+
+                    if (car.airborneTime > 0.2) {
+                        airborneBadgeVisible = true;
+                    }
+                } else if (airborneBadgeVisible) {
+                    airborneGroundedHold += deltaSeconds;
+
+                    // Keep badge on for a brief grace period after landing to avoid flicker
+                    if (airborneGroundedHold > 0.3) {
+                        airborneBadgeVisible = false;
+                        lastAirborneDuration = 0;
+                    }
+                }
+
+                const statusText = airborneBadgeVisible ? ` (AIRBORNE ${lastAirborneDuration.toFixed(1)}s)` : '';
                 document.getElementById('speed').textContent = speed.toFixed(1) + statusText;
                 document.getElementById('rpm').textContent = Math.round(car.engineRPM);
                 document.getElementById('gear').textContent = car.gear;
