@@ -8,7 +8,8 @@
     "preview": "cd preview && python -m http.server 8080",
     "build": "echo 'Static preview already built; skipping native CMake build.'",
     "build:native": "mkdir -p build && cd build && cmake .. && cmake --build .",
-    "deploy": "netlify deploy --prod --dir=preview"
+    "deploy": "netlify deploy --prod --dir=preview",
+    "deploy:vercel": "npx vercel --prebuilt --prod --confirm"
   },
   "keywords": [
     "physics",
