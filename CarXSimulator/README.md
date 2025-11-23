@@ -1,5 +1,5 @@
 <div align="center">
-<img width="1268" height="600" alt="Banner" src="[https://i.ibb.co/S4KbJhVZ/Capture.png](https://i.postimg.cc/NMXrGqY9/Capture.png)" />
+<img width="1268" height="600" alt="Banner" src="https://i.postimg.cc/NMXrGqY9/Capture.png" />
 </div>
 
 # 🏎️ CarX Physics Simulator
