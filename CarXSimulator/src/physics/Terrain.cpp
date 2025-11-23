@@ -2,6 +2,7 @@
 #include <cmath>
 #include <algorithm>
 #include <chrono>
+#include <limits>
 
 Terrain::Terrain(int width, int depth) 
     : width(width), depth(depth), curvature(0.0f), scale(1.0f), type(TerrainType::FLAT), normalsCached(false) {
@@ -71,12 +72,14 @@ void Terrain::generateProcedural(float amplitude, float frequency) {
             float height = perlinNoise(worldX, worldZ, 4, 0.5f, 30.0f) * amplitude;
             
             heights[z * width + x] = height;
-            
+
             // Vary friction based on height (higher = less grip)
             friction[z * width + x] = 1.0f - std::abs(height) / (amplitude * 2.0f) * 0.3f;
         }
     }
     type = TerrainType::CUSTOM;
+    normalizeHeightField(amplitude);
+    recalculateFriction();
     invalidateNormals();
     cacheNormals();
 }
@@ -154,6 +157,8 @@ void Terrain::generateByType(TerrainType terrainType) {
         default:
             break;
     }
+    normalizeHeightField();
+    recalculateFriction();
     cacheNormals();
 }
 
@@ -202,13 +207,35 @@ void Terrain::generateRaceTrack(float radius, float trackWidth, float banking) {
 }
 
 void Terrain::regenerate() {
-    // Generate new random seed
+    regenerateSmooth();
+}
+
+void Terrain::regenerateSmooth(int smoothingIterations, float blendStrength) {
+    // Preserve previous surface to blend against and avoid harsh pop-in
+    std::vector<float> previousHeights = heights;
+    std::vector<float> previousFriction = friction;
+
     auto now = std::chrono::high_resolution_clock::now();
     seed = static_cast<unsigned int>(now.time_since_epoch().count());
     rng.seed(seed);
-    
-    // Regenerate current terrain type
+
     generateByType(type);
+    normalizeHeightField();
+    smoothTerrain(std::max(1, smoothingIterations));
+    recalculateFriction();
+
+    float t = std::clamp(blendStrength, 0.0f, 1.0f);
+    if (!previousHeights.empty() && previousHeights.size() == heights.size()) {
+        for (size_t i = 0; i < heights.size(); ++i) {
+            heights[i] = previousHeights[i] * (1.0f - t) + heights[i] * t;
+            if (i < previousFriction.size()) {
+                friction[i] = previousFriction[i] * (1.0f - t) + friction[i] * t;
+            }
+        }
+    }
+
+    invalidateNormals();
+    cacheNormals();
 }
 
 float Terrain::getHeight(float x, float z) const {
@@ -418,6 +445,41 @@ void Terrain::applyErosion(float strength) {
     heights = eroded;
     invalidateNormals();
     cacheNormals();
+}
+
+void Terrain::normalizeHeightField(float targetAmplitude) {
+    if (heights.empty()) return;
+
+    auto [minIt, maxIt] = std::minmax_element(heights.begin(), heights.end());
+    float maxAbs = std::max(std::abs(*minIt), std::abs(*maxIt));
+    if (maxAbs < std::numeric_limits<float>::epsilon()) {
+        return;
+    }
+
+    float amplitude = targetAmplitude > 0.0f ? targetAmplitude : maxAbs;
+    float normalizeScale = amplitude / maxAbs;
+    for (float& h : heights) {
+        h *= normalizeScale;
+    }
+}
+
+void Terrain::recalculateFriction(float maxGripVariance) {
+    if (heights.empty()) return;
+
+    auto [minIt, maxIt] = std::minmax_element(heights.begin(), heights.end());
+    float maxAbs = std::max(std::abs(*minIt), std::abs(*maxIt));
+    if (maxAbs < std::numeric_limits<float>::epsilon()) {
+        std::fill(friction.begin(), friction.end(), 1.0f);
+        return;
+    }
+
+    float variance = std::max(0.0f, maxGripVariance);
+    for (size_t i = 0; i < heights.size(); ++i) {
+        float normalizedHeight = std::abs(heights[i]) / maxAbs;
+        float baseline = i < friction.size() ? friction[i] : 1.0f;
+        float grip = baseline * (1.0f - normalizedHeight * variance);
+        friction[i] = std::clamp(grip, 0.55f, 1.35f);
+    }
 }
 
 void Terrain::setMaterialZone(float x, float z, float radius, float frictionValue) {

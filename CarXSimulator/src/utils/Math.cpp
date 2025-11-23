@@ -68,6 +68,63 @@ Matrix4 Matrix4::lookAt(const Vector3& eye, const Vector3& center, const Vector3
     mat.m[12] = -s.dot(eye);
     mat.m[13] = -u.dot(eye);
     mat.m[14] = f.dot(eye);
-    
+
     return mat;
+}
+
+Matrix4 Matrix4::translate(const Vector3& v) {
+    Matrix4 mat = identity();
+    mat.m[12] = v.x;
+    mat.m[13] = v.y;
+    mat.m[14] = v.z;
+    return mat;
+}
+
+Matrix4 Matrix4::scale(const Vector3& s) {
+    Matrix4 mat = identity();
+    mat.m[0] = s.x;
+    mat.m[5] = s.y;
+    mat.m[10] = s.z;
+    return mat;
+}
+
+Matrix4 Matrix4::rotate(const Quaternion& q) {
+    Quaternion nq = q.normalized();
+    float xx = nq.x * nq.x;
+    float yy = nq.y * nq.y;
+    float zz = nq.z * nq.z;
+    float xy = nq.x * nq.y;
+    float xz = nq.x * nq.z;
+    float yz = nq.y * nq.z;
+    float wx = nq.w * nq.x;
+    float wy = nq.w * nq.y;
+    float wz = nq.w * nq.z;
+
+    Matrix4 mat = identity();
+    mat.m[0] = 1.0f - 2.0f * (yy + zz);
+    mat.m[1] = 2.0f * (xy + wz);
+    mat.m[2] = 2.0f * (xz - wy);
+
+    mat.m[4] = 2.0f * (xy - wz);
+    mat.m[5] = 1.0f - 2.0f * (xx + zz);
+    mat.m[6] = 2.0f * (yz + wx);
+
+    mat.m[8] = 2.0f * (xz + wy);
+    mat.m[9] = 2.0f * (yz - wx);
+    mat.m[10] = 1.0f - 2.0f * (xx + yy);
+    return mat;
+}
+
+Matrix4 Matrix4::operator*(const Matrix4& other) const {
+    Matrix4 result;
+    for (int row = 0; row < 4; ++row) {
+        for (int col = 0; col < 4; ++col) {
+            result.m[col * 4 + row] =
+                m[0 * 4 + row] * other.m[col * 4 + 0] +
+                m[1 * 4 + row] * other.m[col * 4 + 1] +
+                m[2 * 4 + row] * other.m[col * 4 + 2] +
+                m[3 * 4 + row] * other.m[col * 4 + 3];
+        }
+    }
+    return result;
 }

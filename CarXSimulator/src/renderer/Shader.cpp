@@ -53,6 +53,11 @@ void Shader::setFloat(const char* name, float value) {
     // glUniform1f(location, value);
 }
 
+void Shader::setInt(const char* name, int value) {
+    // GLint location = glGetUniformLocation(programID, name);
+    // glUniform1i(location, value);
+}
+
 bool Shader::compile(const std::string& vertexCode, const std::string& fragmentCode) {
     // Compile shaders (OpenGL-specific implementation)
     return true;
