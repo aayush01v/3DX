@@ -4,25 +4,17 @@
 #include "Terrain.h"
 #include <GL/glew.h>
 #include <algorithm>
+#include <cmath>
 
 #ifndef USE_VULKAN
 
-// Performance optimization structures
-struct RenderBatch {
-    GLuint vao, vbo, ebo;
-    size_t indexCount;
-    GLenum primitiveType;
-};
-
-struct FrameBuffer {
-    GLuint fbo, colorTexture, depthTexture;
-    int width, height;
-};
-
 // OpenGL implementation with advanced optimizations
-Renderer::Renderer() : width(0), height(0), initialized(false), 
-                       msaaFBO(0), msaaSamples(4), shadowMapSize(2048),
-                       useInstancing(true), useFrustumCulling(true) {}
+Renderer::Renderer() : width(0), height(0), initialized(false),
+                       msaaFBO(0), msaaColorBuffer(0), msaaDepthBuffer(0),
+                       msaaSamples(4), shadowMapSize(2048), shadowMapFBO(0),
+                       shadowMapTexture(0), useInstancing(true),
+                       useFrustumCulling(true), instanceVBO(0),
+                       instanceBufferCapacity(0) {}
 
 Renderer::~Renderer() {
     shutdown();
@@ -86,6 +78,12 @@ void Renderer::shutdown() {
     if (shadowMapFBO) {
         glDeleteFramebuffers(1, &shadowMapFBO);
         glDeleteTextures(1, &shadowMapTexture);
+    }
+
+    if (instanceVBO) {
+        glDeleteBuffers(1, &instanceVBO);
+        instanceVBO = 0;
+        instanceBufferCapacity = 0;
     }
     
     // Cleanup MSAA framebuffer
@@ -206,7 +204,17 @@ void Renderer::renderCarOptimized(const Car* car) {
 
 void Renderer::renderTerrainOptimized(const Terrain* terrain) {
     if (!terrain || !terrainShader) return;
-    
+
+    // Skip terrain if it is completely outside the view frustum
+    if (useFrustumCulling) {
+        float halfWidth = terrain->getWidth() * terrain->getScale() * 0.5f;
+        float halfDepth = terrain->getDepth() * terrain->getScale() * 0.5f;
+        float radius = std::sqrt(halfWidth * halfWidth + halfDepth * halfDepth);
+        if (!isInFrustum(Vector3(0, 0, 0), radius)) {
+            return;
+        }
+    }
+
     terrainShader->use();
     
     // Set matrices
@@ -454,11 +462,21 @@ void Renderer::renderCarsInstanced(const std::vector<std::unique_ptr<Car>>& cars
     if (modelMatrices.empty()) return;
     
     // Upload instance data to GPU
-    GLuint instanceVBO;
-    glGenBuffers(1, &instanceVBO);
+    size_t requiredBytes = modelMatrices.size() * sizeof(Matrix4);
+    if (!instanceVBO) {
+        glGenBuffers(1, &instanceVBO);
+        instanceBufferCapacity = 0;
+    }
+
     glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-    glBufferData(GL_ARRAY_BUFFER, modelMatrices.size() * sizeof(Matrix4),
-                 modelMatrices.data(), GL_DYNAMIC_DRAW);
+
+    // Grow buffer only when needed to avoid per-frame allocations
+    if (requiredBytes > instanceBufferCapacity) {
+        glBufferData(GL_ARRAY_BUFFER, requiredBytes, modelMatrices.data(), GL_DYNAMIC_DRAW);
+        instanceBufferCapacity = requiredBytes;
+    } else {
+        glBufferSubData(GL_ARRAY_BUFFER, 0, requiredBytes, modelMatrices.data());
+    }
     
     // Setup instanced attributes
     GLuint vao = carMesh->getVAO();
@@ -475,13 +493,12 @@ void Renderer::renderCarsInstanced(const std::vector<std::unique_ptr<Car>>& cars
     carMesh->drawInstanced(modelMatrices.size());
     
     // Cleanup
-    glDeleteBuffers(1, &instanceVBO);
     glBindVertexArray(0);
 }
 
 void Renderer::renderTerrainWithLOD(const Terrain* terrain) {
     if (!terrain) return;
-    
+
     Vector3 camPos = camera->getPosition();
     float distance = (camPos - Vector3(0, 0, 0)).length();
     
@@ -493,6 +510,8 @@ void Renderer::renderTerrainWithLOD(const Terrain* terrain) {
     // Render terrain with appropriate detail level
     // This would use pre-generated terrain meshes at different LODs
     if (terrainMesh) {
+        terrainShader->setInt("lodLevel", lodLevel);
+        terrainShader->setFloat("lodDistance", distance);
         terrainMesh->draw();
     }
 }
@@ -548,8 +567,44 @@ bool Renderer::isInFrustum(const Vector3& position, float radius) const {
 
 Plane Renderer::extractPlane(const Matrix4& vp, int planeIndex) {
     // Extract plane from view-projection matrix
-    // Implementation depends on Matrix4 structure
-    return Plane(Vector3(0, 1, 0), 0);
+    Plane plane;
+    switch (planeIndex) {
+        case 0: // Left
+            plane.normal = Vector3(vp.m[3] + vp.m[0], vp.m[7] + vp.m[4], vp.m[11] + vp.m[8]);
+            plane.d = vp.m[15] + vp.m[12];
+            break;
+        case 1: // Right
+            plane.normal = Vector3(vp.m[3] - vp.m[0], vp.m[7] - vp.m[4], vp.m[11] - vp.m[8]);
+            plane.d = vp.m[15] - vp.m[12];
+            break;
+        case 2: // Bottom
+            plane.normal = Vector3(vp.m[3] + vp.m[1], vp.m[7] + vp.m[5], vp.m[11] + vp.m[9]);
+            plane.d = vp.m[15] + vp.m[13];
+            break;
+        case 3: // Top
+            plane.normal = Vector3(vp.m[3] - vp.m[1], vp.m[7] - vp.m[5], vp.m[11] - vp.m[9]);
+            plane.d = vp.m[15] - vp.m[13];
+            break;
+        case 4: // Near
+            plane.normal = Vector3(vp.m[3] + vp.m[2], vp.m[7] + vp.m[6], vp.m[11] + vp.m[10]);
+            plane.d = vp.m[15] + vp.m[14];
+            break;
+        case 5: // Far
+            plane.normal = Vector3(vp.m[3] - vp.m[2], vp.m[7] - vp.m[6], vp.m[11] - vp.m[10]);
+            plane.d = vp.m[15] - vp.m[14];
+            break;
+        default:
+            plane = Plane(Vector3(0, 1, 0), 0);
+            break;
+    }
+
+    float length = plane.normal.length();
+    if (length > 0.0f) {
+        plane.normal = plane.normal / length;
+        plane.d /= length;
+    }
+
+    return plane;
 }
 
 #endif

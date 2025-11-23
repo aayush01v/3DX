@@ -1,5 +1,6 @@
 #pragma once
 #include <cmath>
+#include <array>
 
 struct Vector3 {
     float x, y, z;
@@ -31,6 +32,14 @@ struct Quaternion {
     Quaternion normalized() const;
 };
 
+struct Plane {
+    Vector3 normal;
+    float d;
+
+    Plane(const Vector3& n = Vector3(), float distance = 0.0f) : normal(n), d(distance) {}
+    float distance(const Vector3& p) const { return normal.dot(p) + d; }
+};
+
 struct Matrix4 {
     float m[16];
     
@@ -41,6 +50,9 @@ struct Matrix4 {
     static Matrix4 translate(const Vector3& v);
     static Matrix4 rotate(const Quaternion& q);
     static Matrix4 scale(const Vector3& s);
-    
+
     Matrix4 operator*(const Matrix4& other) const;
+
+    const float* data() const { return m; }
+    float* data() { return m; }
 };

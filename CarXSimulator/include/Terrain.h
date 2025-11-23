@@ -22,6 +22,7 @@ public:
     void generateByType(TerrainType type);
     void generateRaceTrack(float radius, float width, float banking);
     void regenerate(); // Regenerate with new random seed
+    void regenerateSmooth(int smoothingIterations = 2, float blendStrength = 0.45f);
     
     float getHeight(float x, float z) const;
     Vector3 getNormal(float x, float z) const;
@@ -31,6 +32,7 @@ public:
     void setCurvature(float c) { curvature = c; }
     float getCurvature() const { return curvature; }
     void setScale(float s) { scale = s; }
+    float getScale() const { return scale; }
     void setSeed(unsigned int s) { seed = s; }
     unsigned int getSeed() const { return seed; }
     
@@ -62,7 +64,9 @@ private:
     float smoothNoise(float x, float z) const;
     float interpolate(float a, float b, float t) const;
     float perlinNoise(float x, float z, int octaves, float persistence, float scale) const;
-    
+    void normalizeHeightField(float targetAmplitude = 12.0f);
+    void recalculateFriction(float maxGripVariance = 0.3f);
+
     std::vector<float> heights;
     std::vector<float> friction;  // Per-vertex friction
     std::vector<Vector3> normals; // Cached normals for performance
