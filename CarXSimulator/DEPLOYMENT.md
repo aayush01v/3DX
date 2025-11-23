@@ -61,9 +61,10 @@ npm run deploy:vercel
 vercel --prebuilt --prod --confirm
 ```
 
-> The repo is preconfigured for static hosting on Vercel: `vercel.json` points to the
-> `preview/` output, rewrites `/` to `final-demo.html`, and sets cache headers for
-> large assets like `.glb` and `.exr` models.
+> The repo is preconfigured for static hosting on Vercel using the version 2 schema:
+> `vercel.json` builds the `preview/` output via `@vercel/static-build`, rewrites `/`
+> to `final-demo.html`, and sets cache headers for large assets like `.glb` and `.exr`
+> models.
 
 #### Option B: Self-Hosted Server
 
