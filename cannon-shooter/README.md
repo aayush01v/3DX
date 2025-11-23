@@ -1,5 +1,5 @@
 <div align="center">
-<img width="600" height="1268" alt="Banner" src="https://i.ibb.co/S4KbJhVZ/Capture.png" />
+<img width="1268" height="600" alt="Banner" src="https://i.ibb.co/S4KbJhVZ/Capture.png" />
 </div>
 # Cannon Shooter
 
