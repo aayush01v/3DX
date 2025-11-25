@@ -10,17 +10,17 @@
   "installCommand": "echo 'Skipping package install for static preview deployment.'",
   "buildCommand": "echo 'Using prebuilt preview/ assets for deployment.'",
   "rewrites": [
-    { "source": "/", "destination": "/final-demo.html" },
+    { "source": "/", "destination": "/final-preview.html" },
     {
       "source": "/:path*",
       "has": [
-        { "type": "header", "key": "Accept", "value": "text/html(?:,\s*\*\/\*)?" }
+        { "type": "header", "key": "Accept", "value": "text/html(?:,\\s*\\*\/\\*)?" }
       ],
       "missing": [
         { "type": "file" },
         { "type": "url" }
       ],
-      "destination": "/final-demo.html"
+      "destination": "/final-preview.html"
     }
   ],
   "headers": [

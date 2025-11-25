@@ -4,14 +4,15 @@
     {
       "src": "CarXSimulator/package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "CarXSimulator/preview" }
+      "config": { "distDir": "preview" }
     }
   ],
-  "installCommand": "cd CarXSimulator && echo 'Skipping package install for static preview deployment.'",
-  "buildCommand": "cd CarXSimulator && echo 'Using prebuilt preview/ assets for deployment.'",
+  "installCommand": "echo 'Skipping package install for static preview deployment.'",
+  "buildCommand": "mkdir -p preview && cp -a CarXSimulator/preview/. preview/",
+  "outputDirectory": "preview",
   "rewrites": [
-    { "source": "/", "destination": "/final-demo.html" },
-    { "source": "/:path*", "destination": "/final-demo.html" }
+    { "source": "/", "destination": "/final-preview.html" },
+    { "source": "/:path*", "destination": "/final-preview.html" }
   ],
   "headers": [
     {
