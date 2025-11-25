@@ -20,7 +20,12 @@
             background: radial-gradient(circle at 35% 20%, rgba(255,255,255,0.12), transparent 35%),
                         #050816;
         }
-        canvas { width: 100%; height: 100%; display: block; }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            touch-action: none; /* Prevent page scroll during steering on touch devices */
+        }
         #controls {
             width: 380px;
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(239, 244, 255, 0.96) 100%);
@@ -231,8 +236,8 @@
         /* Mobile control overlay */
         .mobile-control-panel {
             display: none;
-            position: absolute;
-            bottom: 16px;
+            position: fixed;
+            bottom: calc(12px + env(safe-area-inset-bottom));
             left: 0;
             right: 0;
             padding: 0 16px;
@@ -242,11 +247,16 @@
         }
         .mobile-control-panel.visible {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
+            justify-content: center;
+            align-items: stretch;
+            flex-wrap: wrap;
+            max-width: 1100px;
+            margin: 0 auto;
+            row-gap: 12px;
+            pointer-events: none;
         }
         .mobile-cluster {
-            flex: 1;
+            flex: 1 1 320px;
             pointer-events: auto;
             background: rgba(5, 8, 22, 0.8);
             border: 1px solid rgba(255,255,255,0.15);
@@ -285,6 +295,22 @@
         .mobile-row .wide { flex: 1; }
         .mobile-row .half { flex: 0.5; }
         body.mobile #instructions { font-size: 11px; }
+
+        @media (max-width: 720px) {
+            .mobile-control-panel.visible {
+                flex-direction: column;
+                padding: 0 12px;
+            }
+
+            .mobile-cluster {
+                width: 100%;
+            }
+
+            #hud,
+            #camera-info {
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
@@ -725,6 +751,7 @@ car.getSpeed();</textarea>
                     if (mobileControlsPanel) {
                         mobileControlsPanel.classList.add('visible');
                     }
+                    setupMobileControls();
                 } else {
                     body.classList.remove('mobile');
                     if (instructionsEl) {
@@ -1779,6 +1806,7 @@ car.getSpeed();</textarea>
         const car = new Car();
         const terrain = new Terrain();
         const keys = {}; // Use const instead of let
+        let mobileControlsBound = false;
 
         const toggleKeyGroup = (keyNames, isActive) => {
             keyNames.forEach((name) => { keys[name] = isActive; });
@@ -1804,8 +1832,11 @@ car.getSpeed();</textarea>
             ['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach((event) => el.addEventListener(event, release));
         };
 
-        const setupMobileControls = () => {
-            if (!isMobileDevice() || !mobileControlsPanel) return;
+        function setupMobileControls() {
+            if (!mobileControlsPanel) return;
+            if (!isMobileDevice()) return;
+            if (mobileControlsBound) return;
+            mobileControlsBound = true;
             bindMobileButton('btn-throttle', ['ArrowUp', 'KeyW', 'w', 'W']);
             bindMobileButton('btn-brake', ['ArrowDown', 'KeyS', 's', 'S']);
             bindMobileButton('btn-steer-left', ['ArrowLeft', 'KeyA', 'a', 'A']);
@@ -1823,7 +1854,9 @@ car.getSpeed();</textarea>
                 debugSphere.visible = !debugSphere.visible;
                 console.log('✓ Ground debug:', debugSphere.visible ? 'ON' : 'OFF');
             });
-        };
+
+            console.log('✓ Mobile controls ready');
+        }
         let paused = false;
         
         // Debug: Log key presses
@@ -1944,6 +1977,12 @@ car.getSpeed();</textarea>
             camera.updateProjectionMatrix();
             renderer.setSize(canvas.clientWidth, canvas.clientHeight);
             applyResponsiveLayout();
+            setupMobileControls();
+        });
+
+        window.addEventListener('orientationchange', () => {
+            applyResponsiveLayout();
+            setupMobileControls();
         });
         
         // Enhanced camera controls - Touch and Mouse
