@@ -673,19 +673,16 @@ car.getSpeed();</textarea>
                 if (window.location.pathname.includes('/preview/')) {
                     return window.location.pathname.replace(/[^/]*$/, '');
                 }
-                if (window.location.pathname.includes('final-demo')) {
-                    return '/preview/';
-                }
                 return null;
             })();
 
             const pathHints = [
-                previewPath,
                 currentPath,
+                previewPath,
                 window.location.pathname.includes('/CarXSimulator/preview/') ? '/CarXSimulator/preview/' : null,
-                '/preview/',
                 './',
-                '/'
+                '/',
+                '/preview/'
             ].filter(Boolean);
 
             return [...new Set(pathHints.map(normalizedPath))];
