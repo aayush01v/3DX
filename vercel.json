@@ -11,8 +11,10 @@
   "buildCommand": "echo 'Using prebuilt preview/ assets for deployment.'",
   "outputDirectory": "CarXSimulator/preview",
   "rewrites": [
-    { "source": "/", "destination": "/final-demo.html" },
-    { "source": "/:path*", "destination": "/final-demo.html" }
+    {
+      "source": "/((?!.*\\.).*)",
+      "destination": "/final-demo.html"
+    }
   ],
   "headers": [
     {
