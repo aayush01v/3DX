@@ -204,6 +204,26 @@
         body.mobile #camera-info { right: 12px; top: 12px; }
         body.mobile .instructions { position: static; margin: 12px; bottom: auto; left: auto; }
 
+        /* CSS-level mobile fallback so layout remains usable even if JS fails early */
+        @media (max-width: 900px) {
+            #app { flex-direction: column; height: auto; }
+            #viewport { height: 65vh; min-height: 320px; }
+            #controls {
+                width: 100%;
+                height: auto;
+                padding: 16px;
+                box-shadow: none;
+                border-left: none;
+                border-top: 1px solid rgba(255,255,255,0.25);
+            }
+            h1 { font-size: 24px; }
+            .section { padding: 14px; }
+            .stat-grid { grid-template-columns: 1fr; }
+            #hud { left: 12px; top: 12px; padding: 12px 14px; font-size: 12px; }
+            #camera-info { right: 12px; top: 12px; }
+            .instructions { position: static; margin: 12px; }
+        }
+
         /* Mobile control overlay */
         .mobile-control-panel {
             display: none;
@@ -651,9 +671,17 @@ car.getSpeed();</textarea>
             // Resolve asset base so GLB/EXR files load correctly both locally and
             // when deployed behind Vercel rewrites (where the page is served from
             // "/" but assets live under /preview/).
-            const assetBase = window.location.protocol === 'file:'
-                ? './'
-                : '/preview/';
+            const assetBase = (() => {
+                if (window.location.protocol === 'file:') return './';
+                const path = window.location.pathname;
+
+                // If we are already under /preview/, keep assets relative to that folder.
+                if (path.includes('/preview/')) return '/preview/';
+
+                // Fall back to the current folder so deployments under custom paths still load assets.
+                const resolved = path.substring(0, path.lastIndexOf('/') + 1);
+                return resolved || './';
+            })();
             const instructionsEl = document.getElementById('instructions');
             const mobileControlsPanel = document.getElementById('mobile-controls');
             const defaultInstructions = instructionsEl ? instructionsEl.innerHTML : '';
@@ -1442,10 +1470,34 @@ car.getSpeed();</textarea>
 
             console.log('Attempting to load: lowpoly_game_model.glb');
 
-            loader.load(
+            const glbCandidates = [
                 `${assetBase}lowpoly_game_model.glb`,
-                (gltf) => {
-                    console.log('✓ GLB Model loaded successfully!');
+                './lowpoly_game_model.glb',
+                '/preview/lowpoly_game_model.glb',
+                '/lowpoly_game_model.glb'
+            ];
+
+            const loadGlbWithFallbacks = (urls) => new Promise((resolve, reject) => {
+                const next = urls.shift();
+                if (!next) {
+                    reject(new Error('No GLB sources available'));
+                    return;
+                }
+
+                loader.load(
+                    next,
+                    (gltf) => resolve({ gltf, url: next }),
+                    undefined,
+                    (error) => {
+                        console.warn(`Failed to load GLB from ${next}:`, error.message || error);
+                        loadGlbWithFallbacks(urls).then(resolve).catch(reject);
+                    }
+                );
+            });
+
+            loadGlbWithFallbacks(glbCandidates.slice())
+                .then(({ gltf, url }) => {
+                    console.log('✓ GLB Model loaded successfully from', url);
                     carMesh = gltf.scene;
 
                     // Fix alignment - proper scale, rotation, and position
@@ -1488,16 +1540,12 @@ car.getSpeed();</textarea>
                     });
 
                     scene.add(carMesh);
-                },
-                (progress) => {
-                    console.log('Loading:', (progress.loaded / progress.total * 100).toFixed(0) + '%');
-                },
-                (error) => {
+                })
+                .catch((error) => {
                     console.error('Failed to load GLB, using fallback:', error);
                     carMesh = createCarModel();
                     scene.add(carMesh);
-                }
-            );
+                });
         } else {
             console.error('Failed to load GLTFLoader: missing THREE.GLTFLoader script');
             carMesh = createCarModel();
