@@ -9,8 +9,19 @@
   ],
   "installCommand": "echo 'Skipping package install for static preview deployment.'",
   "buildCommand": "echo 'Using prebuilt preview/ assets for deployment.'",
-  "routes": [
-    { "src": "/", "dest": "/final-demo.html" }
+  "rewrites": [
+    { "source": "/", "destination": "/final-demo.html" },
+    {
+      "source": "/:path*",
+      "has": [
+        { "type": "header", "key": "Accept", "value": "text/html(?:,\s*\*\/\*)?" }
+      ],
+      "missing": [
+        { "type": "file" },
+        { "type": "url" }
+      ],
+      "destination": "/final-demo.html"
+    }
   ],
   "headers": [
     {
