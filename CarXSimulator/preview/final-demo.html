@@ -648,9 +648,12 @@ car.getSpeed();</textarea>
 
         async function startCarX() {
             const body = document.body;
-            // Always load assets relative to this HTML file so the preview works
-            // whether opened directly from disk or served via ``serve.py``.
-            const assetBase = './';
+            // Resolve asset base so GLB/EXR files load correctly both locally and
+            // when deployed behind Vercel rewrites (where the page is served from
+            // "/" but assets live under /preview/).
+            const assetBase = window.location.protocol === 'file:'
+                ? './'
+                : '/preview/';
             const instructionsEl = document.getElementById('instructions');
             const mobileControlsPanel = document.getElementById('mobile-controls');
             const defaultInstructions = instructionsEl ? instructionsEl.innerHTML : '';
