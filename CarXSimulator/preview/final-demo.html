@@ -733,6 +733,7 @@ car.getSpeed();</textarea>
                 ]),
                 'EXRLoader',
                 {
+                    optional: true,
                     validator: () => typeof THREE !== 'undefined' && typeof THREE.EXRLoader !== 'undefined'
                 }
             );
@@ -744,6 +745,7 @@ car.getSpeed();</textarea>
                 ]),
                 'GLTFLoader',
                 {
+                    optional: true,
                     validator: () => typeof THREE !== 'undefined' && typeof THREE.GLTFLoader !== 'undefined'
                 }
             );
