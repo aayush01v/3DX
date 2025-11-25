@@ -655,6 +655,10 @@ car.getSpeed();</textarea>
         });
 
         const baseCandidates = (() => {
+            const normalizedPath = (path) => (path.endsWith('/') ? path : `${path}/`)
+                .replace(/\/+$/, '/')
+                .replace(/\/{2,}/g, '/');
+
             const currentPath = (() => {
                 try {
                     const baseUrl = new URL('.', window.location.href);
@@ -665,7 +669,18 @@ car.getSpeed();</textarea>
                 }
             })();
 
+            const previewPath = (() => {
+                if (window.location.pathname.includes('/preview/')) {
+                    return window.location.pathname.replace(/[^/]*$/, '');
+                }
+                if (window.location.pathname.includes('final-demo')) {
+                    return '/preview/';
+                }
+                return null;
+            })();
+
             const pathHints = [
+                previewPath,
                 currentPath,
                 window.location.pathname.includes('/CarXSimulator/preview/') ? '/CarXSimulator/preview/' : null,
                 '/preview/',
@@ -673,9 +688,7 @@ car.getSpeed();</textarea>
                 '/'
             ].filter(Boolean);
 
-            return [...new Set(pathHints.map((path) => (path.endsWith('/') ? path : `${path}/`)))]
-                .map((path) => path.replace(/\/+$/, '/')
-                    .replace(/\/{2,}/g, '/'));
+            return [...new Set(pathHints.map(normalizedPath))];
         })();
 
         const buildSourceList = (relativePath, cdnSources = []) => {
@@ -746,9 +759,24 @@ car.getSpeed();</textarea>
         })();
 
         const resolveAssetBase = async () => {
-            const preferred = baseCandidates[0] || './';
-            console.log(`✓ Asset base resolved: ${preferred}`);
-            return preferred;
+            const probes = ['lowpoly_game_model.glb', 'farmland_overcast_1k.exr'];
+
+            for (const base of baseCandidates) {
+                const normalizedBase = base.replace(/\/+$/, '/') || './';
+                try {
+                    const response = await fetch(`${normalizedBase}${probes[0]}`, { method: 'HEAD' });
+                    if (response.ok) {
+                        console.log(`✓ Asset base resolved: ${normalizedBase}`);
+                        return normalizedBase;
+                    }
+                } catch (err) {
+                    console.warn(`Asset base probe failed for ${normalizedBase}:`, err.message);
+                }
+            }
+
+            const fallback = baseCandidates[0] || './';
+            console.warn(`Using fallback asset base: ${fallback}`);
+            return fallback;
         };
 
         async function startCarX() {
