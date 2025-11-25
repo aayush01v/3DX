@@ -65,6 +65,11 @@ vercel --prebuilt --prod --confirm
 > (rewriting `/` to `/final-demo.html`) and skips unnecessary installs/builds so
 > you can deploy the prebuilt preview assets directly.
 
+> **Monorepo tip:** If your Vercel project points at the repository root (and
+> not the `CarXSimulator/` subdirectory), the root-level `vercel.json` mirrors
+> this configuration and targets `CarXSimulator/preview` so you can deploy
+> without changing the project settings.
+
 > The repo is preconfigured for static hosting on Vercel: `vercel.json` points to the
 > `preview/` output, rewrites `/` to `final-demo.html`, and sets cache headers for
 > large assets like `.glb` and `.exr` models.
