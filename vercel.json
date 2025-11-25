@@ -8,7 +8,8 @@
     }
   ],
   "installCommand": "cd CarXSimulator && echo 'Skipping package install for static preview deployment.'",
-  "buildCommand": "cd CarXSimulator && echo 'Using prebuilt preview/ assets for deployment.'",
+  "buildCommand": "echo 'Using prebuilt preview/ assets for deployment.'",
+  "outputDirectory": "CarXSimulator/preview",
   "rewrites": [
     { "source": "/", "destination": "/final-demo.html" },
     { "source": "/:path*", "destination": "/final-demo.html" }
