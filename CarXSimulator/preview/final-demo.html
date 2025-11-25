@@ -1389,6 +1389,18 @@ car.getSpeed();</textarea>
         let treesGroup = new THREE.Group();
         let vegetationLoaded = false;
         let treeModel = null;
+
+        // Helper: sample terrain normal so we can avoid planting on cliffs
+        function getSurfaceNormal(x, z) {
+            const h = 0.6; // Slightly wider sample for a smoother normal
+            const hL = terrain.getHeight(x - h, z);
+            const hR = terrain.getHeight(x + h, z);
+            const hD = terrain.getHeight(x, z - h);
+            const hU = terrain.getHeight(x, z + h);
+
+            const normal = new THREE.Vector3(hL - hR, 2 * h, hD - hU);
+            return normal.normalize();
+        }
         
         // Create simple procedural trees instead of loading broken GLB
         function createSimpleTree() {
@@ -1441,35 +1453,62 @@ car.getSpeed();</textarea>
         
         function spawnVegetation() {
             if (!vegetationLoaded || !treeModel) return;
-            
+
             // Clear existing vegetation
             treesGroup.clear();
-            
+
             const carPos = car.position;
             const spawnRadius = 100; // Spawn within 100 units of car
             const treeCount = 30; // Number of trees
-            
-            // Spawn trees randomly
-            for (let i = 0; i < treeCount; i++) {
+            const placed = [];
+            const maxAttempts = treeCount * 12;
+            const minSpacing = 6; // Keep trees from merging together
+            let attempts = 0;
+
+            while (treesGroup.children.length < treeCount && attempts < maxAttempts) {
+                attempts++;
                 const angle = Math.random() * Math.PI * 2;
                 const distance = 20 + Math.random() * spawnRadius; // Keep away from car
                 const x = carPos.x + Math.cos(angle) * distance;
                 const z = carPos.z + Math.sin(angle) * distance;
-                
+
                 // Sample terrain height so trunks always touch the ground surface
                 const height = terrain.getHeight(x, z);
+                const normal = getSurfaceNormal(x, z);
+
+                // Reject locations that are too steep or where the normal is unstable
+                if (!normal || normal.y < 0.7) continue;
+
+                // Avoid clustering by enforcing a minimum distance between placements
+                let tooClose = false;
+                for (const p of placed) {
+                    if ((p.x - x) ** 2 + (p.z - z) ** 2 < minSpacing * minSpacing) {
+                        tooClose = true;
+                        break;
+                    }
+                }
+                if (tooClose) continue;
 
                 const tree = treeModel.clone(true); // Deep clone to ensure independent positioning
-                tree.position.set(x, height, z); // Place at ground surface height
-                tree.rotation.y = Math.random() * Math.PI * 2;
+                const baseOffset = 0.08; // Lift trees slightly so foliage does not stitch into the mesh
+                tree.position.set(x, height + baseOffset, z); // Place at ground surface height
+
+                // Align tree with terrain normal for a natural settle, but keep random spin
+                const yaw = Math.random() * Math.PI * 2;
+                const up = new THREE.Vector3(0, 1, 0);
+                const tiltAxis = new THREE.Vector3().crossVectors(up, normal);
+                const tiltAngle = Math.acos(Math.min(Math.max(normal.dot(up), -1), 1));
+                const yawQuat = new THREE.Quaternion().setFromAxisAngle(up, yaw);
+                const tiltQuat = tiltAxis.lengthSq() > 0 ? new THREE.Quaternion().setFromAxisAngle(tiltAxis.normalize(), tiltAngle * 0.55) : new THREE.Quaternion();
+                tree.quaternion.multiplyQuaternions(yawQuat, tiltQuat);
+
                 const scale = 1.0 + Math.random() * 0.5; // Random scale 1.0-1.5 (normal size)
                 tree.scale.set(scale, scale, scale);
                 treesGroup.add(tree);
-                
-
+                placed.push({ x, z });
             }
-            
-            console.log('✓ Spawned', treeCount, 'trees');
+
+            console.log('✓ Spawned', treesGroup.children.length, 'trees after', attempts, 'attempts');
         }
         
         function clearVegetation() {
