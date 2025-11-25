@@ -11,17 +11,7 @@
   "buildCommand": "cd CarXSimulator && echo 'Using prebuilt preview/ assets for deployment.'",
   "rewrites": [
     { "source": "/", "destination": "/final-demo.html" },
-    {
-      "source": "/:path*",
-      "has": [
-        { "type": "header", "key": "Accept", "value": "text/html(?:,\\s*\\*/\\*)?" }
-      ],
-      "missing": [
-        { "type": "file" },
-        { "type": "url" }
-      ],
-      "destination": "/final-demo.html"
-    }
+    { "source": "/:path*", "destination": "/final-demo.html" }
   ],
   "headers": [
     {
