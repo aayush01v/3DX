@@ -616,9 +616,9 @@ car.getSpeed();</textarea>
         import * as THREE from 'three';
 
         const body = document.body;
-        const assetBase = window.location.protocol === 'file:'
-            ? './'
-            : '/CarXSimulator/preview/';
+        // Always load assets relative to this HTML file so the preview works
+        // whether opened directly from disk or served via ``serve.py``.
+        const assetBase = './';
         const instructionsEl = document.getElementById('instructions');
         const mobileControlsPanel = document.getElementById('mobile-controls');
         const defaultInstructions = instructionsEl ? instructionsEl.innerHTML : '';
