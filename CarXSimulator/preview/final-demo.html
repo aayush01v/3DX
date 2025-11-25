@@ -604,39 +604,79 @@ car.getSpeed();</textarea>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-
     <script>
-        const body = document.body;
-        // Always load assets relative to this HTML file so the preview works
-        // whether opened directly from disk or served via ``serve.py``.
-        const assetBase = './';
-        const instructionsEl = document.getElementById('instructions');
-        const mobileControlsPanel = document.getElementById('mobile-controls');
-        const defaultInstructions = instructionsEl ? instructionsEl.innerHTML : '';
+        const loadScript = (src) => new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = () => resolve(src);
+            script.onerror = () => reject(new Error(`Failed to load ${src}`));
+            document.head.appendChild(script);
+        });
 
-        const isMobileDevice = () => /Mobi|Android|iPhone|iPad|iPod|Tablet/i.test(navigator.userAgent) || window.innerWidth < 900;
-
-        const applyResponsiveLayout = () => {
-            if (isMobileDevice()) {
-                body.classList.add('mobile');
-                if (instructionsEl) {
-                    instructionsEl.innerHTML = '<div>Tap the on-screen controls to drive or drag to look around.</div>' +
-                        '<div>Pinch to zoom. C Follow | R Reset | G Debug remain available.</div>';
-                }
-                if (mobileControlsPanel) {
-                    mobileControlsPanel.classList.add('visible');
-                }
-            } else {
-                body.classList.remove('mobile');
-                if (instructionsEl) {
-                    instructionsEl.innerHTML = defaultInstructions;
-                }
-                if (mobileControlsPanel) {
-                    mobileControlsPanel.classList.remove('visible');
+        const loadWithFallbacks = async (sources, label, { optional = false } = {}) => {
+            for (const src of sources) {
+                try {
+                    await loadScript(src);
+                    return src;
+                } catch (err) {
+                    console.warn(`⚠️ ${label} fallback needed:`, err.message);
                 }
             }
+            if (!optional) {
+                throw new Error(`${label} could not be loaded`);
+            }
+            console.warn(`⚠️ ${label} not available; using built-in fallbacks`);
+            return null;
         };
+
+        window.whenThreeReady = (async () => {
+            await loadWithFallbacks([
+                './vendor/three/three.min.js',
+                'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js'
+            ], 'three.js');
+
+            await loadWithFallbacks([
+                './vendor/three/EXRLoader.js',
+                'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/EXRLoader.js'
+            ], 'EXRLoader', { optional: true });
+
+            await loadWithFallbacks([
+                './vendor/three/GLTFLoader.js',
+                'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js'
+            ], 'GLTFLoader', { optional: true });
+        })();
+
+        async function startCarX() {
+            const body = document.body;
+            // Always load assets relative to this HTML file so the preview works
+            // whether opened directly from disk or served via ``serve.py``.
+            const assetBase = './';
+            const instructionsEl = document.getElementById('instructions');
+            const mobileControlsPanel = document.getElementById('mobile-controls');
+            const defaultInstructions = instructionsEl ? instructionsEl.innerHTML : '';
+
+            const isMobileDevice = () => /Mobi|Android|iPhone|iPad|iPod|Tablet/i.test(navigator.userAgent) || window.innerWidth < 900;
+
+            const applyResponsiveLayout = () => {
+                if (isMobileDevice()) {
+                    body.classList.add('mobile');
+                    if (instructionsEl) {
+                        instructionsEl.innerHTML = '<div>Tap the on-screen controls to drive or drag to look around.</div>' +
+                            '<div>Pinch to zoom. C Follow | R Reset | G Debug remain available.</div>';
+                    }
+                    if (mobileControlsPanel) {
+                        mobileControlsPanel.classList.add('visible');
+                    }
+                } else {
+                    body.classList.remove('mobile');
+                    if (instructionsEl) {
+                        instructionsEl.innerHTML = defaultInstructions;
+                    }
+                    if (mobileControlsPanel) {
+                        mobileControlsPanel.classList.remove('visible');
+                    }
+                }
+            };
 
         // Physics
         class Vec3 {
@@ -1011,7 +1051,8 @@ car.getSpeed();</textarea>
                 this.type = 'hills'; // Start with hills for better demo
                 this.needsUpdate = true;
                 this.seed = 12345.6789; // Fixed seed for consistent terrain (changes with position)
-                this.chunkSize = 50; // Size of terrain chunks
+                this.chunkSize = 80; // Size of terrain chunks (matches visible mesh better)
+                this.origin = { x: 0, z: 0 }; // Where the current chunk is centered
                 this.lastCarPos = { x: 0, z: 0 };
                 this.updateCount = 0; // Track number of terrain updates
             }
@@ -1139,12 +1180,14 @@ car.getSpeed();</textarea>
             
             // Check if terrain needs update based on car movement
             checkUpdate(carX, carZ) {
-                const dx = carX - this.lastCarPos.x;
-                const dz = carZ - this.lastCarPos.z;
+                const dx = carX - this.origin.x;
+                const dz = carZ - this.origin.z;
                 const distance = Math.sqrt(dx * dx + dz * dz);
-                
-                // Update terrain mesh when car moves significantly (more frequent updates)
-                if (distance > 30) { // Update every 30 units of movement for smooth infinite terrain
+
+                // Recenter terrain when the car moves far from the current origin
+                if (distance > this.chunkSize * 0.35) { // Trigger updates before leaving the visible mesh
+                    this.origin.x = Math.round(carX / this.chunkSize) * this.chunkSize;
+                    this.origin.z = Math.round(carZ / this.chunkSize) * this.chunkSize;
                     this.lastCarPos.x = carX;
                     this.lastCarPos.z = carZ;
                     this.needsUpdate = true;
@@ -1296,69 +1339,68 @@ car.getSpeed();</textarea>
         renderer.toneMappingExposure = 0.5; // Default exposure
         
         // Load HDR environment map with optimized resolution
-        import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/EXRLoader.js')
-            .then(module => {
-                const EXRLoader = module.EXRLoader;
-                const loader = new EXRLoader();
-                
-                // Calculate optimal resolution based on screen size
-                const screenWidth = window.innerWidth;
-                const screenHeight = window.innerHeight;
-                const maxDimension = Math.max(screenWidth, screenHeight);
-                
-                // Determine target resolution (power of 2 for better performance)
-                let targetResolution;
-                if (maxDimension <= 1024) {
-                    targetResolution = 512; // Low res for small screens
-                } else if (maxDimension <= 1920) {
-                    targetResolution = 1024; // Medium res for HD screens
-                } else if (maxDimension <= 2560) {
-                    targetResolution = 2048; // High res for 2K screens
-                } else {
-                    targetResolution = 4096; // Ultra res for 4K+ screens
+        (() => {
+            if (!THREE.EXRLoader) {
+                console.warn('⚠️ EXRLoader not available: ensure examples script loaded');
+                return;
+            }
+
+            const loader = new THREE.EXRLoader();
+
+            // Calculate optimal resolution based on screen size
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+            const maxDimension = Math.max(screenWidth, screenHeight);
+
+            // Determine target resolution (power of 2 for better performance)
+            let targetResolution;
+            if (maxDimension <= 1024) {
+                targetResolution = 512; // Low res for small screens
+            } else if (maxDimension <= 1920) {
+                targetResolution = 1024; // Medium res for HD screens
+            } else if (maxDimension <= 2560) {
+                targetResolution = 2048; // High res for 2K screens
+            } else {
+                targetResolution = 4096; // Ultra res for 4K+ screens
+            }
+
+            console.log('🌍 Loading HDR environment:', targetResolution + 'px');
+
+            loader.load(
+                `${assetBase}farmland_overcast_1k.exr`,
+                (texture) => {
+                    // Optimize texture settings
+                    texture.mapping = THREE.EquirectangularReflectionMapping;
+
+                    // Store texture globally for toggle control
+                    window.hdrTexture = texture;
+
+                    // Don't automatically enable - let quality setting control it
+                    // HDR will only be enabled when quality is set to "High"
+
+                    // Set default exposure
+                    renderer.toneMappingExposure = 0.5;
+
+                    // Disable HDR checkbox initially (will be enabled by quality setting)
+                    document.getElementById('hdr-enabled').checked = false;
+                    document.getElementById('hdr-enabled').disabled = true;
+
+                    console.log('✓ HDR environment loaded successfully!');
+                    console.log('  Resolution:', texture.image.width + 'x' + texture.image.height);
+                    console.log('  Optimized for screen:', targetResolution + 'px');
+                    console.log('  HDR will be enabled when Quality is set to High');
+                },
+                (progress) => {
+                    const percent = (progress.loaded / progress.total * 100).toFixed(0);
+                    console.log('Loading HDR:', percent + '%');
+                },
+                (error) => {
+                    console.warn('⚠️ Failed to load HDR environment:', error);
+                    console.log('Using fallback sky color');
+                    // Keep the fallback sky blue color
                 }
-                
-                console.log('🌍 Loading HDR environment:', targetResolution + 'px');
-                
-                loader.load(
-                    `${assetBase}farmland_overcast_1k.exr`,
-                    (texture) => {
-                        // Optimize texture settings
-                        texture.mapping = THREE.EquirectangularReflectionMapping;
-                        
-                        // Store texture globally for toggle control
-                        window.hdrTexture = texture;
-                        
-                        // Don't automatically enable - let quality setting control it
-                        // HDR will only be enabled when quality is set to "High"
-                        
-                        // Set default exposure
-                        renderer.toneMappingExposure = 0.5;
-                        
-                        // Disable HDR checkbox initially (will be enabled by quality setting)
-                        document.getElementById('hdr-enabled').checked = false;
-                        document.getElementById('hdr-enabled').disabled = true;
-                        
-                        console.log('✓ HDR environment loaded successfully!');
-                        console.log('  Resolution:', texture.image.width + 'x' + texture.image.height);
-                        console.log('  Optimized for screen:', targetResolution + 'px');
-                        console.log('  HDR will be enabled when Quality is set to High');
-                    },
-                    (progress) => {
-                        const percent = (progress.loaded / progress.total * 100).toFixed(0);
-                        console.log('Loading HDR:', percent + '%');
-                    },
-                    (error) => {
-                        console.warn('⚠️ Failed to load HDR environment:', error);
-                        console.log('Using fallback sky color');
-                        // Keep the fallback sky blue color
-                    }
-                );
-            })
-            .catch(error => {
-                console.warn('⚠️ EXRLoader not available:', error);
-                console.log('Using fallback sky color');
-            });
+            );
+        })();
 
         // Optimized lighting setup
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -1392,75 +1434,72 @@ car.getSpeed();</textarea>
         // Load GLB model
         let carMesh = null;
         
-        import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js')
-            .then(module => {
-                const GLTFLoader = module.GLTFLoader;
-                const loader = new GLTFLoader();
-                
-                console.log('Attempting to load: lowpoly_game_model.glb');
-                
-                loader.load(
-                    `${assetBase}lowpoly_game_model.glb`,
-                    (gltf) => {
-                        console.log('✓ GLB Model loaded successfully!');
-                        carMesh = gltf.scene;
-                        
-                        // Fix alignment - proper scale, rotation, and position
-                        carMesh.scale.set(2.5, 2.5, 2.5); // Larger for better visibility
-                        
-                        // FIX: Rotate 90° on Y-axis to align with physics forward direction
-                        // Physics forward is -Z, but model might be oriented along X
-                        carMesh.rotation.y = -Math.PI / 2; // -90 degrees to align with physics
-                        
-                        // DO NOT set position.y here - it will be set by physics in animation loop
-                        // The model's pivot point should be at the bottom (wheels on ground)
-                        
-                        console.log('✓ Car model aligned - rotation fixed for proper steering');
-                        
-                        // Optimize materials and enable shadows
-                        carMesh.traverse((child) => {
-                            if (child.isMesh) {
-                                child.castShadow = true;
-                                child.receiveShadow = true;
-                                
-                                // Enhance materials with PBR properties
-                                if (child.material) {
-                                    child.material.needsUpdate = true;
-                                    
-                                    // Add metallic/roughness for realistic look
-                                    if (child.material.metalness === undefined) {
-                                        child.material.metalness = 0.3;
-                                        child.material.roughness = 0.7;
-                                    }
-                                }
-                                
-                                // Optimize geometry
-                                if (child.geometry) {
-                                    child.geometry.computeVertexNormals();
-                                    if (!child.geometry.attributes.uv) {
-                                        child.geometry.computeBoundingBox();
-                                    }
+        if (THREE.GLTFLoader) {
+            const loader = new THREE.GLTFLoader();
+
+            console.log('Attempting to load: lowpoly_game_model.glb');
+
+            loader.load(
+                `${assetBase}lowpoly_game_model.glb`,
+                (gltf) => {
+                    console.log('✓ GLB Model loaded successfully!');
+                    carMesh = gltf.scene;
+
+                    // Fix alignment - proper scale, rotation, and position
+                    carMesh.scale.set(2.5, 2.5, 2.5); // Larger for better visibility
+
+                    // FIX: Rotate 90° on Y-axis to align with physics forward direction
+                    // Physics forward is -Z, but model might be oriented along X
+                    carMesh.rotation.y = -Math.PI / 2; // -90 degrees to align with physics
+
+                    // DO NOT set position.y here - it will be set by physics in animation loop
+                    // The model's pivot point should be at the bottom (wheels on ground)
+
+                    console.log('✓ Car model aligned - rotation fixed for proper steering');
+
+                    // Optimize materials and enable shadows
+                    carMesh.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+
+                            // Enhance materials with PBR properties
+                            if (child.material) {
+                                child.material.needsUpdate = true;
+
+                                // Add metallic/roughness for realistic look
+                                if (child.material.metalness === undefined) {
+                                    child.material.metalness = 0.3;
+                                    child.material.roughness = 0.7;
                                 }
                             }
-                        });
-                        
-                        scene.add(carMesh);
-                    },
-                    (progress) => {
-                        console.log('Loading:', (progress.loaded / progress.total * 100).toFixed(0) + '%');
-                    },
-                    (error) => {
-                        console.error('Failed to load GLB, using fallback:', error);
-                        carMesh = createCarModel();
-                        scene.add(carMesh);
-                    }
-                );
-            })
-            .catch(error => {
-                console.error('Failed to load GLTFLoader:', error);
-                carMesh = createCarModel();
-                scene.add(carMesh);
-            });
+
+                            // Optimize geometry
+                            if (child.geometry) {
+                                child.geometry.computeVertexNormals();
+                                if (!child.geometry.attributes.uv) {
+                                    child.geometry.computeBoundingBox();
+                                }
+                            }
+                        }
+                    });
+
+                    scene.add(carMesh);
+                },
+                (progress) => {
+                    console.log('Loading:', (progress.loaded / progress.total * 100).toFixed(0) + '%');
+                },
+                (error) => {
+                    console.error('Failed to load GLB, using fallback:', error);
+                    carMesh = createCarModel();
+                    scene.add(carMesh);
+                }
+            );
+        } else {
+            console.error('Failed to load GLTFLoader: missing THREE.GLTFLoader script');
+            carMesh = createCarModel();
+            scene.add(carMesh);
+        }
 
         // Enhanced terrain with better visuals - LARGER for infinite driving
         const terrainGeometry = new THREE.PlaneGeometry(400, 400, 120, 120); // Much larger and higher resolution
@@ -1589,7 +1628,13 @@ car.getSpeed();</textarea>
 
                 const tree = treeModel.clone(true); // Deep clone to ensure independent positioning
                 const baseOffset = 0.08; // Lift trees slightly so foliage does not stitch into the mesh
-                tree.position.set(x, height + baseOffset, z); // Place at ground surface height
+
+                // Drop trees directly onto the visible mesh to guarantee contact
+                const raycaster = new THREE.Raycaster(new THREE.Vector3(x, 200, z), new THREE.Vector3(0, -1, 0));
+                const intersections = raycaster.intersectObject(terrainMesh);
+                const plantedHeight = intersections.length > 0 ? intersections[0].point.y : height;
+
+                tree.position.set(x, plantedHeight + baseOffset, z); // Place at ground surface height
 
                 // Align tree with terrain normal for a natural settle, but keep random spin
                 const yaw = Math.random() * Math.PI * 2;
@@ -1651,8 +1696,6 @@ car.getSpeed();</textarea>
         const debugSphere = new THREE.Mesh(debugSphereGeom, debugSphereMat);
         debugSphere.visible = false; // Toggle with 'G' key
         scene.add(debugSphere);
-
-        setupMobileControls();
 
         // Physics
         const car = new Car();
@@ -1720,10 +1763,16 @@ car.getSpeed();</textarea>
             // Center terrain around car position for infinite terrain effect
             const carX = car.position.x;
             const carZ = car.position.z;
-            
-            // Update terrain mesh position to follow car
-            terrainMesh.position.x = Math.floor(carX / 20) * 20; // Snap to grid
-            terrainMesh.position.z = Math.floor(carZ / 20) * 20;
+
+            // Update terrain mesh position to follow car using the terrain origin for continuity
+            if (!terrain.origin) {
+                terrain.origin = { x: 0, z: 0 };
+            }
+            terrain.origin.x = Math.round(carX / terrain.chunkSize) * terrain.chunkSize;
+            terrain.origin.z = Math.round(carZ / terrain.chunkSize) * terrain.chunkSize;
+
+            terrainMesh.position.x = terrain.origin.x;
+            terrainMesh.position.z = terrain.origin.z;
             
             // PlaneGeometry creates vertices in XY plane: (x, y, 0)
             // After rotation.x = -PI/2, the plane is horizontal (XZ plane)
@@ -2506,6 +2555,8 @@ car.getSpeed();</textarea>
             autoQualityEnabled = document.getElementById('auto-quality').checked;
             console.log('✓ Auto quality:', autoQualityEnabled ? 'enabled' : 'disabled');
         };
+
+        setupMobileControls();
 
         window.setTerrain = (type) => {
             terrain.type = type;
@@ -3406,11 +3457,33 @@ car.getMomentum();`;
         setTimeout(() => {
             showNotification('🏎️ CarX Simulator v2.2 - Professional Physics Active!', 'info');
         }, 1000);
-        
+
         console.log('✓ CarX Simulator v2.2 ready!');
         console.log('✓ Professional vehicle dynamics enabled');
         console.log('✓ Pacejka tire model, load transfer, downforce active');
         console.log('✓ Use arrow keys to drive, adjust settings in right panel');
+        }
+
+        window.whenThreeReady
+            .then(() => startCarX())
+            .catch((err) => {
+                console.error('Failed to initialize 3D engine:', err);
+                const container = document.getElementById('viewport');
+                if (container) {
+                    const fallback = document.createElement('div');
+                    fallback.style.position = 'absolute';
+                    fallback.style.top = '50%';
+                    fallback.style.left = '50%';
+                    fallback.style.transform = 'translate(-50%, -50%)';
+                    fallback.style.color = '#fff';
+                    fallback.style.padding = '12px 16px';
+                    fallback.style.borderRadius = '10px';
+                    fallback.style.background = 'rgba(0,0,0,0.6)';
+                    fallback.style.border = '1px solid rgba(255,255,255,0.2)';
+                    fallback.textContent = 'Failed to load 3D libraries. Please check your connection.';
+                    container.appendChild(fallback);
+                }
+            });
     </script>
 </body>
 </html>
