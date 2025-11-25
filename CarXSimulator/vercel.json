@@ -2,13 +2,10 @@
   "version": 2,
   "builds": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "preview" }
+      "src": "preview/**",
+      "use": "@vercel/static"
     }
   ],
-  "installCommand": "echo 'Skipping package install for static preview deployment.'",
-  "buildCommand": "echo 'Using prebuilt preview/ assets for deployment.'",
   "rewrites": [
     { "source": "/", "destination": "/final-demo.html" }
   ],
