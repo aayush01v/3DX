@@ -8,37 +8,46 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: radial-gradient(circle at 20% 20%, #182649 0%, #0e1327 45%, #070a17 100%);
             height: 100vh;
             overflow: hidden;
+            color: #0f172a;
         }
         #app { display: flex; height: 100vh; }
-        #viewport { flex: 1; position: relative; background: #0a0e27; }
+        #viewport {
+            flex: 1;
+            position: relative;
+            background: radial-gradient(circle at 35% 20%, rgba(255,255,255,0.12), transparent 35%),
+                        #050816;
+        }
         canvas { width: 100%; height: 100%; display: block; }
         #controls {
             width: 380px;
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(239, 244, 255, 0.96) 100%);
+            backdrop-filter: blur(24px);
             padding: 25px;
             overflow-y: auto;
-            box-shadow: -10px 0 40px rgba(0,0,0,0.2);
+            box-shadow: -10px 0 60px rgba(0,0,0,0.35);
+            border-left: 1px solid rgba(255,255,255,0.35);
         }
         h1 { color: #667eea; font-size: 28px; font-weight: 700; margin-bottom: 8px; }
         .subtitle { color: #666; font-size: 14px; margin-bottom: 20px; }
         .section {
             margin-bottom: 20px;
             padding: 20px;
-            background: #f8f9fa;
-            border-radius: 12px;
-            border: 1px solid #e0e0e0;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 14px;
+            border: 1px solid #e6ebf5;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
         }
         .section h2 { font-size: 16px; margin-bottom: 15px; color: #333; }
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .stat {
-            background: white;
+            background: linear-gradient(135deg, #ffffff 0%, #f1f4fb 100%);
             padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            border: 1px solid #e6ebf5;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
         }
         .stat-label {
             font-size: 11px;
@@ -51,31 +60,38 @@
         button {
             width: 100%;
             padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #667eea 0%, #5dd8ff 100%);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 14px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
             margin-bottom: 10px;
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.35);
         }
-        button:hover { transform: translateY(-2px); }
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 30px rgba(93, 216, 255, 0.35);
+            filter: saturate(1.05);
+        }
         .terrain-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .terrain-buttons button { font-size: 12px; padding: 10px; }
         #hud {
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(0, 0, 0, 0.5);
+            background: linear-gradient(180deg, rgba(6, 10, 25, 0.9) 0%, rgba(7, 15, 38, 0.82) 100%);
             color: white;
-            padding: 15px 20px;
-            border-radius: 10px;
+            padding: 16px 20px;
+            border-radius: 14px;
             font-family: 'Courier New', monospace;
             font-size: 13px;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
             min-width: 200px;
+            border: 1px solid rgba(255,255,255,0.12);
+            box-shadow: 0 10px 35px rgba(0,0,0,0.45);
         }
         #hud .hud-section {
             margin-bottom: 10px;
@@ -136,13 +152,15 @@
             position: absolute;
             top: 20px;
             right: 20px;
-            background: rgba(0, 0, 0, 0.5);
+            background: linear-gradient(180deg, rgba(6, 10, 25, 0.85) 0%, rgba(11, 19, 43, 0.8) 100%);
             color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
+            padding: 12px 16px;
+            border-radius: 12px;
             font-size: 11px;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
             text-align: right;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
         }
         #camera-info .label {
             color: #888;
@@ -153,11 +171,13 @@
             position: absolute;
             bottom: 20px;
             left: 20px;
-            background: rgba(0, 0, 0, 0.5);
+            background: linear-gradient(180deg, rgba(8, 13, 29, 0.82) 0%, rgba(7, 15, 33, 0.78) 100%);
             color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
+            padding: 12px 15px;
+            border-radius: 12px;
             font-size: 12px;
+            border: 1px solid rgba(255,255,255,0.12);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.45);
         }
         kbd {
             background: rgba(255,255,255,0.2);
@@ -1152,9 +1172,8 @@ car.getSpeed();</textarea>
         const scene = new THREE.Scene();
         
         // Sky and atmosphere - will be replaced by HDR environment
-        scene.background = new THREE.Color(0x87ceeb); // Sky blue (fallback)
-        // Disable fog to prevent terrain cut-off appearance
-        // scene.fog = new THREE.Fog(0x87ceeb, 100, 500);
+        scene.background = new THREE.Color(0x7ab3ff); // Sky blue (fallback)
+        scene.fog = new THREE.Fog(0x8fb8ff, 80, 260);
 
         const camera = new THREE.PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
         camera.position.set(0, 12, 25); // Better default view
@@ -1168,6 +1187,7 @@ car.getSpeed();</textarea>
         
         renderer.setSize(canvas.clientWidth, canvas.clientHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x0b112a, 1);
         
         // Shadow settings
         renderer.shadowMap.enabled = true;
@@ -1346,13 +1366,18 @@ car.getSpeed();</textarea>
 
         // Enhanced terrain with better visuals - LARGER for infinite driving
         const terrainGeometry = new THREE.PlaneGeometry(400, 400, 120, 120); // Much larger and higher resolution
-        const terrainMaterial = new THREE.MeshStandardMaterial({ 
+        const terrainColors = new Float32Array(terrainGeometry.attributes.position.count * 3);
+        terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3));
+
+        const terrainMaterial = new THREE.MeshStandardMaterial({
             color: 0x4a7c3a, // Proper grass green
-            roughness: 0.9,
-            metalness: 0.0,
+            roughness: 0.85,
+            metalness: 0.05,
             flatShading: false,
+            vertexColors: true,
             side: THREE.FrontSide // Only visible from top (no double-sided)
         });
+        terrainMaterial.envMapIntensity = 0.2;
         const terrainMesh = new THREE.Mesh(terrainGeometry, terrainMaterial);
         terrainMesh.rotation.x = -Math.PI / 2; // Rotate to horizontal
         terrainMesh.position.y = 0; // Ensure it's at ground level
@@ -1364,6 +1389,18 @@ car.getSpeed();</textarea>
         let treesGroup = new THREE.Group();
         let vegetationLoaded = false;
         let treeModel = null;
+
+        // Helper: sample terrain normal so we can avoid planting on cliffs
+        function getSurfaceNormal(x, z) {
+            const h = 0.6; // Slightly wider sample for a smoother normal
+            const hL = terrain.getHeight(x - h, z);
+            const hR = terrain.getHeight(x + h, z);
+            const hD = terrain.getHeight(x, z - h);
+            const hU = terrain.getHeight(x, z + h);
+
+            const normal = new THREE.Vector3(hL - hR, 2 * h, hD - hU);
+            return normal.normalize();
+        }
         
         // Create simple procedural trees instead of loading broken GLB
         function createSimpleTree() {
@@ -1416,35 +1453,62 @@ car.getSpeed();</textarea>
         
         function spawnVegetation() {
             if (!vegetationLoaded || !treeModel) return;
-            
+
             // Clear existing vegetation
             treesGroup.clear();
-            
+
             const carPos = car.position;
             const spawnRadius = 100; // Spawn within 100 units of car
             const treeCount = 30; // Number of trees
-            
-            // Spawn trees randomly
-            for (let i = 0; i < treeCount; i++) {
+            const placed = [];
+            const maxAttempts = treeCount * 12;
+            const minSpacing = 6; // Keep trees from merging together
+            let attempts = 0;
+
+            while (treesGroup.children.length < treeCount && attempts < maxAttempts) {
+                attempts++;
                 const angle = Math.random() * Math.PI * 2;
                 const distance = 20 + Math.random() * spawnRadius; // Keep away from car
                 const x = carPos.x + Math.cos(angle) * distance;
                 const z = carPos.z + Math.sin(angle) * distance;
-                
+
                 // Sample terrain height so trunks always touch the ground surface
                 const height = terrain.getHeight(x, z);
+                const normal = getSurfaceNormal(x, z);
+
+                // Reject locations that are too steep or where the normal is unstable
+                if (!normal || normal.y < 0.7) continue;
+
+                // Avoid clustering by enforcing a minimum distance between placements
+                let tooClose = false;
+                for (const p of placed) {
+                    if ((p.x - x) ** 2 + (p.z - z) ** 2 < minSpacing * minSpacing) {
+                        tooClose = true;
+                        break;
+                    }
+                }
+                if (tooClose) continue;
 
                 const tree = treeModel.clone(true); // Deep clone to ensure independent positioning
-                tree.position.set(x, height, z); // Place at ground surface height
-                tree.rotation.y = Math.random() * Math.PI * 2;
+                const baseOffset = 0.08; // Lift trees slightly so foliage does not stitch into the mesh
+                tree.position.set(x, height + baseOffset, z); // Place at ground surface height
+
+                // Align tree with terrain normal for a natural settle, but keep random spin
+                const yaw = Math.random() * Math.PI * 2;
+                const up = new THREE.Vector3(0, 1, 0);
+                const tiltAxis = new THREE.Vector3().crossVectors(up, normal);
+                const tiltAngle = Math.acos(Math.min(Math.max(normal.dot(up), -1), 1));
+                const yawQuat = new THREE.Quaternion().setFromAxisAngle(up, yaw);
+                const tiltQuat = tiltAxis.lengthSq() > 0 ? new THREE.Quaternion().setFromAxisAngle(tiltAxis.normalize(), tiltAngle * 0.55) : new THREE.Quaternion();
+                tree.quaternion.multiplyQuaternions(yawQuat, tiltQuat);
+
                 const scale = 1.0 + Math.random() * 0.5; // Random scale 1.0-1.5 (normal size)
                 tree.scale.set(scale, scale, scale);
                 treesGroup.add(tree);
-                
-
+                placed.push({ x, z });
             }
-            
-            console.log('✓ Spawned', treeCount, 'trees');
+
+            console.log('✓ Spawned', treesGroup.children.length, 'trees after', attempts, 'attempts');
         }
         
         function clearVegetation() {
@@ -1502,7 +1566,12 @@ car.getSpeed();</textarea>
 
         function updateTerrain() {
             const positions = terrainGeometry.attributes.position.array;
-            
+            const colors = terrainGeometry.attributes.color.array;
+
+            const baseColor = new THREE.Color(0x1f3d2a);
+            const midColor = new THREE.Color(0x4f8f5b);
+            const peakColor = new THREE.Color(0xcad7b2);
+
             // Center terrain around car position for infinite terrain effect
             const carX = car.position.x;
             const carZ = car.position.z;
@@ -1525,12 +1594,27 @@ car.getSpeed();</textarea>
                 const localZ = positions[i + 1];
                 const worldX = localX + terrainMesh.position.x;
                 const worldZ = localZ + terrainMesh.position.z;
-                
+
                 const height = terrain.getHeight(worldX, worldZ);
                 positions[i + 2] = -height;  // NEGATIVE because rotation flips Z to -Y
+
+                const colorIndex = (i / 3) * 3;
+                const elevation = THREE.MathUtils.clamp((height + 12) / 35, 0, 1);
+                const blendColor = new THREE.Color();
+
+                if (elevation < 0.55) {
+                    blendColor.copy(baseColor).lerp(midColor, elevation / 0.55);
+                } else {
+                    blendColor.copy(midColor).lerp(peakColor, (elevation - 0.55) / 0.45);
+                }
+
+                colors[colorIndex] = blendColor.r;
+                colors[colorIndex + 1] = blendColor.g;
+                colors[colorIndex + 2] = blendColor.b;
             }
-            
+
             terrainGeometry.attributes.position.needsUpdate = true;
+            terrainGeometry.attributes.color.needsUpdate = true;
             terrainGeometry.computeVertexNormals();
             terrain.needsUpdate = false;
             
