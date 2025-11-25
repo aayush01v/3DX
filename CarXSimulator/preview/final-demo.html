@@ -649,6 +649,7 @@ car.getSpeed();</textarea>
         const loadScript = (src) => new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = src;
+            script.crossOrigin = 'anonymous';
             script.onload = () => resolve(src);
             script.onerror = () => reject(new Error(`Failed to load ${src}`));
             document.head.appendChild(script);
@@ -678,13 +679,15 @@ car.getSpeed();</textarea>
 
             await loadWithFallbacks([
                 './vendor/three/EXRLoader.js',
-                'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/EXRLoader.js'
-            ], 'EXRLoader', { optional: true });
+                'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/EXRLoader.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/examples/js/loaders/EXRLoader.js'
+            ], 'EXRLoader');
 
             await loadWithFallbacks([
                 './vendor/three/GLTFLoader.js',
-                'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js'
-            ], 'GLTFLoader', { optional: true });
+                'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/examples/js/loaders/GLTFLoader.js'
+            ], 'GLTFLoader');
         })();
 
         const resolveAssetBase = async () => {
