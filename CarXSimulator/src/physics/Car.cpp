@@ -4,6 +4,7 @@
 Car::Car(const Vector3& position) 
     : position(position), velocity(0, 0, 0), acceleration(0, 0, 0),
       rotation(1, 0, 0, 0), angularVelocity(0, 0, 0), totalForce(0, 0, 0),
+      externalForces(0, 0, 0),
       mass(1200.0f), inertia(1800.0f), wheelbase(2.5f), trackWidth(1.5f),
       dragCoeff(0.3f), rollingResistance(0.015f), tireGrip(1.0f),
       centerOfMassHeight(0.5f),
@@ -133,102 +134,123 @@ void Car::reset(const Vector3& pos) {
     engineRPM = idleRPM;
     currentGear = 1;
     airborne = false;
+    externalForces = Vector3(0, 0, 0);
 }
 
 void Car::applyForces(float dt, const Vector3& terrainNormal, float terrainFriction) {
     Vector3 forward = getForwardVector();
     Vector3 right = getRightVector();
     Vector3 up = terrainNormal;
-    
-    totalForce = Vector3(0, 0, 0);
+
+    totalForce = externalForces;
+    externalForces = Vector3(0, 0, 0);
     
     if (!airborne) {
+        float speed = velocity.length();
+
+        // Grip budget derived from terrain and tire properties
+        float effectiveGrip = tireGrip * terrainFriction;
+        float maxTireForce = effectiveGrip * mass * 9.81f * 0.8f;
+
+        for (int i = 0; i < 4; ++i) {
+            wheelSlip[i] = 0.0f;
+        }
+
         // Engine force with improved torque curve
         float gearRatio = gearRatios[currentGear] * finalDrive;
-        
-        // Better torque curve - more power at mid-range RPM
-        float rpmRatio = engineRPM / maxRPM;
+
+        float rpmRatio = std::clamp(engineRPM / maxRPM, 0.0f, 1.0f);
         float torqueMultiplier = 1.0f;
         if (rpmRatio < 0.3f) {
             torqueMultiplier = 0.6f + (rpmRatio / 0.3f) * 0.4f; // Low RPM: 60-100%
         } else if (rpmRatio > 0.85f) {
             torqueMultiplier = 1.0f - ((rpmRatio - 0.85f) / 0.15f) * 0.3f; // High RPM: 100-70%
         }
-        
-        float engineTorque = enginePower * torqueMultiplier * std::abs(throttle);
-        float wheelForce = (engineTorque * gearRatio) / (wheelbase * 2.0f);
-        
-        // Apply throttle direction (forward/reverse)
-        Vector3 engineForce = forward * (wheelForce * (throttle >= 0 ? 1.0f : -0.5f));
-        
-        // Tire grip limit with terrain friction
-        float effectiveGrip = tireGrip * terrainFriction;
-        float maxTireForce = effectiveGrip * mass * 9.81f * 0.8f;
-        
-        if (engineForce.length() > maxTireForce) {
-            engineForce = engineForce.normalized() * maxTireForce;
-            // Calculate wheel slip for traction control
-            for (int i = 0; i < 4; ++i) {
-                wheelSlip[i] = (engineForce.length() - maxTireForce) / maxTireForce;
-            }
-        } else {
-            for (int i = 0; i < 4; ++i) {
-                wheelSlip[i] = 0.0f;
-            }
+
+        float baseTorque = enginePower * torqueMultiplier;
+        const float drivelineEfficiency = 0.92f;
+        float driveTorque = baseTorque * gearRatio * drivelineEfficiency;
+
+        float throttleInput = std::clamp(std::abs(throttle), 0.0f, 1.0f);
+        float requestedForce = (driveTorque / std::max(0.01f, wheelRadius)) * (throttle >= 0 ? 1.0f : -0.6f);
+        requestedForce *= throttleInput;
+
+        float driveSlip = (maxTireForce > 1e-3f) ? std::max(0.0f, (std::abs(requestedForce) - maxTireForce) / maxTireForce) : 0.0f;
+        for (int i = 0; i < 4; ++i) {
+            wheelSlip[i] = driveSlip * (throttle >= 0 ? 1.0f : -1.0f);
         }
-        
-        // Apply traction control
-        float throttleOutput = std::abs(throttle);
+
+        float throttleOutput = throttleInput;
         applyTractionControl(throttleOutput);
-        engineForce = engineForce * (throttleOutput / std::max(0.01f, std::abs(throttle)));
-        
-        totalForce = totalForce + engineForce;
-        
+        if (throttleInput > 0.01f) {
+            requestedForce *= (throttleOutput / throttleInput);
+        } else {
+            requestedForce = 0.0f;
+        }
+
+        float driveForce = std::clamp(requestedForce, -maxTireForce, maxTireForce);
+        totalForce = totalForce + forward * driveForce;
+
         // Improved lateral tire forces (cornering)
         float lateralVel = velocity.dot(right);
         float forwardVel = velocity.dot(forward);
-        
+
         if (std::abs(forwardVel) > 0.5f) {
             float slipAngle = std::atan2(lateralVel, std::abs(forwardVel));
-            
-            // Pacejka-like tire model for lateral force
-            float normalizedSlip = std::clamp(slipAngle * 10.0f, -1.0f, 1.0f);
-            float lateralForce = -normalizedSlip * effectiveGrip * mass * 9.81f * 1.5f;
-            
-            // Reduce lateral grip at high slip angles (drifting)
-            if (std::abs(slipAngle) > 0.2f) {
-                lateralForce *= 0.7f;
+
+            float normalizedSlip = std::clamp(slipAngle * 8.0f, -1.0f, 1.0f);
+            float lateralForce = -normalizedSlip * effectiveGrip * mass * 9.81f * 0.4f;
+
+            if (std::abs(slipAngle) > 0.25f) {
+                lateralForce *= 0.65f;
             }
-            
+
             lateralForce = std::clamp(lateralForce, -maxTireForce, maxTireForce);
             totalForce = totalForce + right * lateralForce;
         }
-        
+
         // Improved rolling resistance
-        float speed = velocity.length();
         if (speed > 0.1f) {
             float rollingCoeff = rollingResistance * (1.0f + speed * 0.01f); // Increases with speed
             Vector3 rollingForce = velocity.normalized() * (-rollingCoeff * mass * 9.81f);
             totalForce = totalForce + rollingForce;
         }
-        
+
         // Enhanced brake force with ABS
-        if (brake > 0.01f || handbrake) {
-            float brakeMultiplier = handbrake ? 2.0f : 1.0f;
-            float brakePower = brake * brakeMultiplier;
-            
-            // Apply ABS per wheel
+        if (speed > 0.1f && (brake > 0.01f || handbrake)) {
+            float baseBrakeInput = std::clamp(brake, 0.0f, 1.0f);
+            float brakeScale = handbrake ? 1.2f : 1.0f;
+            float requestedBrake = baseBrakeInput * mass * 18.0f * brakeScale;
+
+            float frontBias = handbrake ? 0.45f : 0.6f;
+            float rearBias = 1.0f - frontBias;
+
+            float perWheelLimit = maxTireForce / 4.0f;
+            float wheelBrake[4] = {
+                requestedBrake * frontBias * 0.5f,
+                requestedBrake * frontBias * 0.5f,
+                requestedBrake * rearBias * 0.5f,
+                requestedBrake * rearBias * 0.5f
+            };
+
+            if (handbrake) {
+                wheelBrake[2] *= 1.2f;
+                wheelBrake[3] *= 1.2f;
+            }
+
             for (int i = 0; i < 4; ++i) {
-                applyABS(brakePower, i);
+                float predictedSlip = perWheelLimit > 1e-3f ? std::max(0.0f, (wheelBrake[i] / perWheelLimit) - 1.0f) : 0.0f;
+                if (predictedSlip > std::abs(wheelSlip[i])) {
+                    wheelSlip[i] = -predictedSlip;
+                }
+
+                applyABS(wheelBrake[i], i);
+                wheelBrake[i] = std::min(wheelBrake[i], perWheelLimit);
             }
-            
-            // Brake force proportional to speed (more effective at high speed)
-            float brakeForce = brakePower * mass * 30.0f * std::min(1.0f, speed / 10.0f);
-            
-            if (speed > 0.1f) {
-                Vector3 brakeVector = velocity.normalized() * (-brakeForce);
-                totalForce = totalForce + brakeVector;
-            }
+
+            float brakeForce = wheelBrake[0] + wheelBrake[1] + wheelBrake[2] + wheelBrake[3];
+            Vector3 brakeVector = velocity.normalized() * (-brakeForce);
+            totalForce = totalForce + brakeVector;
         }
     } else {
         // In air - enhanced airborne physics
@@ -257,10 +279,13 @@ void Car::applyForces(float dt, const Vector3& terrainNormal, float terrainFrict
         angularVelocity = angularVelocity * 0.98f;
     }
     
-    // Aerodynamic drag (always applied)
+    // Aerodynamic drag (always applied, complements wind drag from PhysicsEngine)
     float speed = velocity.length();
     if (speed > 1.0f) {
-        Vector3 dragForce = velocity.normalized() * (-dragCoeff * speed * speed * 1.5f);
+        const float airDensity = 1.225f;
+        const float frontalArea = 2.2f;
+        float dragMagnitude = 0.5f * airDensity * dragCoeff * frontalArea * speed * speed * 0.35f;
+        Vector3 dragForce = velocity.normalized() * (-dragMagnitude);
         totalForce = totalForce + dragForce;
     }
     
@@ -286,6 +311,14 @@ void Car::updateKinematics(float dt) {
     float speed = velocity.length();
     if (speed > maxSpeed) {
         velocity = velocity.normalized() * maxSpeed;
+    }
+
+    // Align velocity with heading to bleed excessive lateral motion
+    if (!airborne && speed > 0.1f) {
+        Vector3 right = getRightVector();
+        float lateralVel = velocity.dot(right);
+        float lateralDamping = std::min(1.0f, speed / 8.0f);
+        velocity = velocity - right * (lateralVel * lateralDamping * 0.05f);
     }
     
     // Update position
@@ -382,11 +415,12 @@ void Car::updateEngine(float dt) {
     // Calculate wheel speed from actual velocity
     Vector3 forward = getForwardVector();
     float forwardSpeed = velocity.dot(forward);
-    float wheelSpeed = std::abs(forwardSpeed) / (wheelRadius * 2.0f * 3.14159f); // rad/s
-    
+    const float twoPi = 6.28318f;
+    float wheelAngularVelocity = std::abs(forwardSpeed) / std::max(0.01f, wheelRadius); // rad/s
+
     // Calculate target RPM based on wheel speed and gear
     float gearRatio = gearRatios[currentGear] * finalDrive;
-    float targetRPM = wheelSpeed * gearRatio * 60.0f; // Convert to RPM
+    float targetRPM = (wheelAngularVelocity * gearRatio * 60.0f) / twoPi; // Convert to RPM
     targetRPM = std::max(idleRPM, targetRPM);
     
     // Engine response based on throttle

@@ -48,7 +48,7 @@ public:
     float getFrontalArea() const { return 2.2f; } // m^2
     
     // Advanced physics
-    void applyForce(const Vector3& force) { totalForce = totalForce + force; }
+    void applyForce(const Vector3& force) { externalForces = externalForces + force; }
     float getRotation() const; // Get yaw angle in radians
     Vector3 getWheelPosition(int wheelIndex) const; // 0=FR, 1=FL, 2=RR, 3=RL
     
@@ -94,6 +94,7 @@ private:
     Quaternion rotation;
     Vector3 angularVelocity;
     Vector3 totalForce;
+    Vector3 externalForces;
     
     // Properties
     float mass;
