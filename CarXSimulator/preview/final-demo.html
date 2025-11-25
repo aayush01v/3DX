@@ -616,6 +616,9 @@ car.getSpeed();</textarea>
         import * as THREE from 'three';
 
         const body = document.body;
+        const assetBase = window.location.protocol === 'file:'
+            ? './'
+            : '/CarXSimulator/preview/';
         const instructionsEl = document.getElementById('instructions');
         const mobileControlsPanel = document.getElementById('mobile-controls');
         const defaultInstructions = instructionsEl ? instructionsEl.innerHTML : '';
@@ -1326,7 +1329,7 @@ car.getSpeed();</textarea>
                 console.log('🌍 Loading HDR environment:', targetResolution + 'px');
                 
                 loader.load(
-                    'farmland_overcast_1k.exr',
+                    `${assetBase}farmland_overcast_1k.exr`,
                     (texture) => {
                         // Optimize texture settings
                         texture.mapping = THREE.EquirectangularReflectionMapping;
@@ -1405,7 +1408,7 @@ car.getSpeed();</textarea>
                 console.log('Attempting to load: lowpoly_game_model.glb');
                 
                 loader.load(
-                    'lowpoly_game_model.glb',
+                    `${assetBase}lowpoly_game_model.glb`,
                     (gltf) => {
                         console.log('✓ GLB Model loaded successfully!');
                         carMesh = gltf.scene;
