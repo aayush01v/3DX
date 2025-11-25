@@ -617,8 +617,11 @@ car.getSpeed();</textarea>
 
         const body = document.body;
         // Always load assets relative to this HTML file so the preview works
-        // whether opened directly from disk or served via ``serve.py``.
-        const assetBase = './';
+        // whether opened directly from disk or served via ``serve.py``. Using
+        // ``new URL`` ensures we keep whatever subdirectory the page lives in
+        // (for example ``/CarXSimulator/preview/``) while also working when
+        // served directly from the preview folder (``/``).
+        const assetBase = new URL('./', window.location.href).toString();
         const instructionsEl = document.getElementById('instructions');
         const mobileControlsPanel = document.getElementById('mobile-controls');
         const defaultInstructions = instructionsEl ? instructionsEl.innerHTML : '';
