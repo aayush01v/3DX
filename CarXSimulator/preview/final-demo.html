@@ -1488,6 +1488,13 @@ car.getSpeed();</textarea>
                     document.getElementById('hdr-enabled').checked = false;
                     document.getElementById('hdr-enabled').disabled = true;
 
+                    // If the user has already selected High quality, reapply it to load HDR immediately
+                    const selectedQuality = currentQuality || document.getElementById('quality-display').textContent.toLowerCase();
+                    if (selectedQuality === 'high') {
+                        setQuality('high');
+                        console.log('✓ HDR environment applied to existing High quality setting');
+                    }
+
                     console.log('✓ HDR environment loaded successfully!');
                     console.log('  Resolution:', texture.image.width + 'x' + texture.image.height);
                     console.log('  Optimized for screen:', targetResolution + 'px');
@@ -2133,6 +2140,9 @@ car.getSpeed();</textarea>
         // Set cursor style
         canvas.style.cursor = 'grab';
 
+        // Track quality selection for HDR activation
+        let currentQuality = 'medium';
+
         // Advanced performance monitoring
         let frameCount = 0;
         let lastFPSUpdate = performance.now();
@@ -2143,6 +2153,7 @@ car.getSpeed();</textarea>
         
         // Advanced quality settings with performance optimization
         window.setQuality = (quality) => {
+            currentQuality = quality;
             document.getElementById('quality-display').textContent = quality.charAt(0).toUpperCase() + quality.slice(1);
             
             switch(quality) {
