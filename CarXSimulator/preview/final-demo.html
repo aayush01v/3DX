@@ -649,30 +649,25 @@ car.getSpeed();</textarea>
         const loadScript = (src) => new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = src;
-            script.crossOrigin = 'anonymous';
             script.onload = () => resolve(src);
             script.onerror = () => reject(new Error(`Failed to load ${src}`));
             document.head.appendChild(script);
         });
 
         const baseCandidates = (() => {
-            const scriptDir = (() => {
-                const script = document.currentScript;
-                if (script?.src) {
-                    try {
-                        const url = new URL(script.src);
-                        return url.pathname.replace(/[^/]+$/, '');
-                    } catch (err) {
-                        console.warn('Unable to parse current script path:', err);
-                    }
+            const currentPath = (() => {
+                try {
+                    const baseUrl = new URL('.', window.location.href);
+                    return baseUrl.pathname;
+                } catch (err) {
+                    console.warn('Unable to derive current path from window.location:', err);
+                    return './';
                 }
-                return null;
             })();
 
             const pathHints = [
-                scriptDir,
+                currentPath,
                 window.location.pathname.includes('/CarXSimulator/preview/') ? '/CarXSimulator/preview/' : null,
-                '/CarXSimulator/preview/',
                 '/preview/',
                 './',
                 '/'
@@ -752,22 +747,9 @@ car.getSpeed();</textarea>
         })();
 
         const resolveAssetBase = async () => {
-            if (window.location.protocol === 'file:') return './';
-
-            for (const base of baseCandidates) {
-                try {
-                    const res = await fetch(`${base}lowpoly_game_model.glb`, { method: 'HEAD' });
-                    if (res.ok) {
-                        console.log(`✓ Asset base resolved: ${base}`);
-                        return base;
-                    }
-                } catch (err) {
-                    console.warn(`Asset base check failed for ${base}:`, err.message || err);
-                }
-            }
-
-            // Default to the project directory when no checks succeed
-            return '/CarXSimulator/preview/';
+            const preferred = baseCandidates[0] || './';
+            console.log(`✓ Asset base resolved: ${preferred}`);
+            return preferred;
         };
 
         async function startCarX() {
