@@ -750,12 +750,19 @@ car.getSpeed();</textarea>
         })();
 
         const resolveAssetBase = async () => {
-            if (window.location.protocol === 'file:') return './';
+            const pageBase = new URL('./', window.location.href).href;
 
-            for (const base of baseCandidates) {
+            // When running locally from the filesystem we always want to use the
+            // page directory so the assets next to this file can be found.
+            if (window.location.protocol === 'file:') return pageBase;
+
+            // Try to find a valid base using lightweight HEAD requests, but fall
+            // back to the page directory even if the server disallows HEAD
+            // (common on some static hosts).
+            for (const base of [pageBase, ...baseCandidates]) {
                 try {
                     const res = await fetch(`${base}lowpoly_game_model.glb`, { method: 'HEAD' });
-                    if (res.ok) {
+                    if (res.ok || res.status === 405) { // 405 = method not allowed but path exists
                         console.log(`✓ Asset base resolved: ${base}`);
                         return base;
                     }
@@ -764,8 +771,9 @@ car.getSpeed();</textarea>
                 }
             }
 
-            // Default to the project directory when no checks succeed
-            return '/CarXSimulator/preview/';
+            // Final fallback: use the directory of the current page
+            console.warn('⚠️ Falling back to page directory for assets:', pageBase);
+            return pageBase;
         };
 
         async function startCarX() {
