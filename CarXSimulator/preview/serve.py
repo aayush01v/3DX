@@ -33,6 +33,28 @@ def parse_port() -> int:
 
 
 class CORSRequestHandler(http.server.SimpleHTTPRequestHandler):
+    """Simple request handler that serves files from the preview folder.
+
+    The preview app sometimes requests assets with a leading "/preview/"
+    prefix (for example when deployed behind a rewrite rule). When we run
+    the local helper from the ``preview`` directory, those absolute paths
+    would normally resolve to ``<cwd>/preview/...`` which does not exist
+    and results in confusing 404s for core assets like ``three.min.js``.
+
+    To make the local experience resilient, we transparently strip a
+    leading "/preview" segment before resolving the path on disk. This
+    keeps the URLs that work in hosted environments while ensuring they
+    load locally without duplicated directory prefixes.
+    """
+
+    def translate_path(self, path):
+        # Allow requests such as /preview/vendor/... to resolve when the
+        # server is started inside the preview directory.
+        if path.startswith("/preview/"):
+            path = path[len("/preview") :]
+
+        return super().translate_path(path)
+
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
