@@ -184,6 +184,61 @@
             padding: 2px 6px;
             border-radius: 3px;
         }
+
+        /* Mobile layout optimizations */
+        body.mobile { overflow-y: auto; }
+        body.mobile #app { flex-direction: column; height: auto; }
+        body.mobile #viewport { height: 65vh; min-height: 360px; }
+        body.mobile #controls {
+            width: 100%;
+            height: auto;
+            padding: 16px;
+            box-shadow: none;
+            border-left: none;
+            border-top: 1px solid rgba(255,255,255,0.25);
+        }
+        body.mobile h1 { font-size: 24px; }
+        body.mobile .section { padding: 14px; }
+        body.mobile .stat-grid { grid-template-columns: 1fr; }
+        body.mobile #hud { left: 12px; top: 12px; padding: 12px 14px; font-size: 12px; }
+        body.mobile #camera-info { right: 12px; top: 12px; }
+        body.mobile .instructions { position: static; margin: 12px; bottom: auto; left: auto; }
+
+        /* Mobile control overlay */
+        .mobile-control-panel {
+            display: none;
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            left: 16px;
+            gap: 10px;
+            padding: 12px;
+            background: rgba(5, 8, 22, 0.72);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 14px;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.45);
+            backdrop-filter: blur(10px);
+            color: #e5edff;
+            z-index: 10;
+        }
+        .mobile-control-panel.visible { display: grid; grid-template-columns: repeat(3, 1fr); align-items: center; }
+        .mobile-control-panel h3 { grid-column: 1 / -1; font-size: 13px; margin-bottom: 4px; color: #9cc4ff; text-transform: uppercase; letter-spacing: 0.5px; }
+        .mobile-controls-col { display: grid; gap: 8px; }
+        .mobile-controls-col .stack { display: grid; gap: 8px; }
+        .mobile-button {
+            background: linear-gradient(135deg, #0f1938 0%, #1b2a55 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #e5edff;
+            border-radius: 12px;
+            padding: 10px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+            touch-action: manipulation;
+        }
+        .mobile-button:active, .mobile-button.active { background: linear-gradient(135deg, #1e305f 0%, #28407b 100%); border-color: rgba(255,255,255,0.25); }
+        .mobile-small-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+        body.mobile #instructions { font-size: 11px; }
     </style>
 </head>
 <body>
@@ -229,7 +284,39 @@
                 <div><kbd>Drag</kbd> Rotate | <kbd>Wheel</kbd> Zoom | <kbd>C</kbd> Follow | <kbd>R</kbd> Reset | <kbd>G</kbd> Debug</div>
                 <div style="margin-top: 5px; font-size: 10px; opacity: 0.7;">🎮 Professional Physics v2.2 - Pacejka Tires, Load Transfer, Downforce</div>
             </div>
-            
+
+            <div id="mobile-controls" class="mobile-control-panel" aria-label="Touch driving controls">
+                <h3>Touch Controls</h3>
+                <div class="mobile-controls-col">
+                    <div class="stack">
+                        <button id="btn-steer-left" class="mobile-button" aria-label="Steer left">← Steer</button>
+                        <button id="btn-steer-right" class="mobile-button" aria-label="Steer right">→ Steer</button>
+                    </div>
+                </div>
+                <div class="mobile-controls-col">
+                    <div class="stack">
+                        <button id="btn-throttle" class="mobile-button" aria-label="Throttle">↑ Throttle</button>
+                        <button id="btn-brake" class="mobile-button" aria-label="Brake">↓ Brake</button>
+                        <button id="btn-handbrake" class="mobile-button" aria-label="Handbrake">⛔ Handbrake</button>
+                    </div>
+                </div>
+                <div class="mobile-controls-col">
+                    <div class="stack">
+                        <div class="mobile-small-row">
+                            <button id="btn-follow" class="mobile-button" aria-label="Toggle follow camera">C
+                                Follow</button>
+                            <button id="btn-reset" class="mobile-button" aria-label="Reset car">R Reset</button>
+                            <button id="btn-debug" class="mobile-button" aria-label="Toggle debug">G Debug</button>
+                        </div>
+                        <div class="mobile-small-row">
+                            <button class="mobile-button" disabled aria-label="Rotate with drag">Drag Rotate</button>
+                            <button class="mobile-button" disabled aria-label="Zoom with wheel">Wheel Zoom</button>
+                            <button class="mobile-button" disabled aria-label="Camera tips">Look Around</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div id="notifications" style="position: absolute; bottom: 80px; left: 20px; max-width: 300px;"></div>
         </div>
         <div id="controls">
@@ -254,20 +341,6 @@
                     <div class="stat">
                         <div class="stat-label">G-Force</div>
                         <div class="stat-value"><span id="gforce">0.0</span> <span class="stat-unit">g</span></div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
-                <h2 style="color: white;">🏎️ Professional Physics v2.2</h2>
-                <div style="font-size: 12px; line-height: 1.6;">
-                    <div style="margin-bottom: 8px;">✅ <strong>Pacejka Tire Model</strong> - Industry standard</div>
-                    <div style="margin-bottom: 8px;">✅ <strong>Load Transfer</strong> - Realistic weight shift</div>
-                    <div style="margin-bottom: 8px;">✅ <strong>Aerodynamic Downforce</strong> - Speed-dependent grip</div>
-                    <div style="margin-bottom: 8px;">✅ <strong>Tire Temperature</strong> - Heat simulation</div>
-                    <div style="margin-bottom: 8px;">✅ <strong>Tire Wear</strong> - Long-term degradation</div>
-                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 11px; opacity: 0.9;">
-                        Based on: Project Chrono, Pacejka Formula, Open-Car-Dynamics
                     </div>
                 </div>
             </div>
@@ -541,6 +614,34 @@ car.getSpeed();</textarea>
 
     <script type="module">
         import * as THREE from 'three';
+
+        const body = document.body;
+        const instructionsEl = document.getElementById('instructions');
+        const mobileControlsPanel = document.getElementById('mobile-controls');
+        const defaultInstructions = instructionsEl ? instructionsEl.innerHTML : '';
+
+        const isMobileDevice = () => /Mobi|Android|iPhone|iPad|iPod|Tablet/i.test(navigator.userAgent) || window.innerWidth < 900;
+
+        const applyResponsiveLayout = () => {
+            if (isMobileDevice()) {
+                body.classList.add('mobile');
+                if (instructionsEl) {
+                    instructionsEl.innerHTML = '<div>Tap the on-screen controls to drive or drag to look around.</div>' +
+                        '<div>Pinch to zoom. C Follow | R Reset | G Debug remain available.</div>';
+                }
+                if (mobileControlsPanel) {
+                    mobileControlsPanel.classList.add('visible');
+                }
+            } else {
+                body.classList.remove('mobile');
+                if (instructionsEl) {
+                    instructionsEl.innerHTML = defaultInstructions;
+                }
+                if (mobileControlsPanel) {
+                    mobileControlsPanel.classList.remove('visible');
+                }
+            }
+        };
 
         // Physics
         class Vec3 {
@@ -1179,8 +1280,8 @@ car.getSpeed();</textarea>
         camera.position.set(0, 12, 25); // Better default view
 
         // Optimized renderer
-        const renderer = new THREE.WebGLRenderer({ 
-            canvas, 
+        const renderer = new THREE.WebGLRenderer({
+            canvas,
             antialias: true,
             powerPreference: "high-performance"
         });
@@ -1188,7 +1289,9 @@ car.getSpeed();</textarea>
         renderer.setSize(canvas.clientWidth, canvas.clientHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setClearColor(0x0b112a, 1);
-        
+
+        applyResponsiveLayout();
+
         // Shadow settings
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -1515,10 +1618,57 @@ car.getSpeed();</textarea>
         debugSphere.visible = false; // Toggle with 'G' key
         scene.add(debugSphere);
 
+        setupMobileControls();
+
         // Physics
         const car = new Car();
         const terrain = new Terrain();
         const keys = {}; // Use const instead of let
+
+        const toggleKeyGroup = (keyNames, isActive) => {
+            keyNames.forEach((name) => { keys[name] = isActive; });
+        };
+
+        const bindMobileButton = (id, keyNames) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+
+            const press = (e) => {
+                e.preventDefault();
+                toggleKeyGroup(keyNames, true);
+                el.classList.add('active');
+            };
+
+            const release = (e) => {
+                if (e) e.preventDefault();
+                toggleKeyGroup(keyNames, false);
+                el.classList.remove('active');
+            };
+
+            ['touchstart', 'mousedown'].forEach((event) => el.addEventListener(event, press, { passive: false }));
+            ['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach((event) => el.addEventListener(event, release));
+        };
+
+        const setupMobileControls = () => {
+            if (!isMobileDevice() || !mobileControlsPanel) return;
+            bindMobileButton('btn-throttle', ['ArrowUp', 'KeyW', 'w', 'W']);
+            bindMobileButton('btn-brake', ['ArrowDown', 'KeyS', 's', 'S']);
+            bindMobileButton('btn-steer-left', ['ArrowLeft', 'KeyA', 'a', 'A']);
+            bindMobileButton('btn-steer-right', ['ArrowRight', 'KeyD', 'd', 'D']);
+            bindMobileButton('btn-handbrake', [' ', 'Space']);
+
+            const followBtn = document.getElementById('btn-follow');
+            if (followBtn) followBtn.addEventListener('click', () => toggleCameraFollow());
+
+            const resetBtn = document.getElementById('btn-reset');
+            if (resetBtn) resetBtn.addEventListener('click', () => resetCar());
+
+            const debugBtn = document.getElementById('btn-debug');
+            if (debugBtn) debugBtn.addEventListener('click', () => {
+                debugSphere.visible = !debugSphere.visible;
+                console.log('✓ Ground debug:', debugSphere.visible ? 'ON' : 'OFF');
+            });
+        };
         let paused = false;
         
         // Debug: Log key presses
@@ -1632,6 +1782,7 @@ car.getSpeed();</textarea>
             camera.aspect = canvas.clientWidth / canvas.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            applyResponsiveLayout();
         });
         
         // Enhanced camera controls - Touch and Mouse
