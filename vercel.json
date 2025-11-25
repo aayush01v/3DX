@@ -4,7 +4,7 @@
     {
       "src": "CarXSimulator/package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "CarXSimulator/preview" }
+      "config": { "distDir": "preview" }
     }
   ],
   "installCommand": "cd CarXSimulator && echo 'Skipping package install for static preview deployment.'",
