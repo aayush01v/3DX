@@ -655,6 +655,40 @@ car.getSpeed();</textarea>
             document.head.appendChild(script);
         });
 
+        const baseCandidates = (() => {
+            const scriptDir = (() => {
+                const script = document.currentScript;
+                if (script?.src) {
+                    try {
+                        const url = new URL(script.src);
+                        return url.pathname.replace(/[^/]+$/, '');
+                    } catch (err) {
+                        console.warn('Unable to parse current script path:', err);
+                    }
+                }
+                return null;
+            })();
+
+            const pathHints = [
+                scriptDir,
+                window.location.pathname.includes('/CarXSimulator/preview/') ? '/CarXSimulator/preview/' : null,
+                '/CarXSimulator/preview/',
+                '/preview/',
+                './',
+                '/'
+            ].filter(Boolean);
+
+            return [...new Set(pathHints.map((path) => (path.endsWith('/') ? path : `${path}/`)))]
+                .map((path) => path.replace(/\/+$/, '/')
+                    .replace(/\/{2,}/g, '/'));
+        })();
+
+        const buildSourceList = (relativePath, cdnSources = []) => {
+            const cleaned = relativePath.replace(/^\//, '');
+            const resolved = baseCandidates.map((base) => `${base}${cleaned}`.replace(/\/{2,}/g, '/'));
+            return [...new Set([...resolved, ...cdnSources])];
+        };
+
         const loadWithFallbacks = async (
             sources,
             label,
@@ -682,35 +716,43 @@ car.getSpeed();</textarea>
         };
 
         window.whenThreeReady = (async () => {
-            await loadWithFallbacks([
-                './vendor/three/three.min.js',
-                'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js'
-            ], 'three.js', {
-                validator: () => typeof THREE !== 'undefined'
-            });
+            await loadWithFallbacks(
+                buildSourceList('vendor/three/three.min.js', [
+                    'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js'
+                ]),
+                'three.js',
+                {
+                    validator: () => typeof THREE !== 'undefined'
+                }
+            );
 
-            await loadWithFallbacks([
-                './vendor/three/EXRLoader.js',
-                'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/EXRLoader.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/examples/js/loaders/EXRLoader.js'
-            ], 'EXRLoader', {
-                validator: () => typeof THREE !== 'undefined' && typeof THREE.EXRLoader !== 'undefined'
-            });
+            await loadWithFallbacks(
+                buildSourceList('vendor/three/EXRLoader.js', [
+                    'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/EXRLoader.js',
+                    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/examples/js/loaders/EXRLoader.js'
+                ]),
+                'EXRLoader',
+                {
+                    validator: () => typeof THREE !== 'undefined' && typeof THREE.EXRLoader !== 'undefined'
+                }
+            );
 
-            await loadWithFallbacks([
-                './vendor/three/GLTFLoader.js',
-                'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/examples/js/loaders/GLTFLoader.js'
-            ], 'GLTFLoader', {
-                validator: () => typeof THREE !== 'undefined' && typeof THREE.GLTFLoader !== 'undefined'
-            });
+            await loadWithFallbacks(
+                buildSourceList('vendor/three/GLTFLoader.js', [
+                    'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js',
+                    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/examples/js/loaders/GLTFLoader.js'
+                ]),
+                'GLTFLoader',
+                {
+                    validator: () => typeof THREE !== 'undefined' && typeof THREE.GLTFLoader !== 'undefined'
+                }
+            );
         })();
 
         const resolveAssetBase = async () => {
             if (window.location.protocol === 'file:') return './';
 
-            const candidates = ['/preview/', './', '/'];
-            for (const base of candidates) {
+            for (const base of baseCandidates) {
                 try {
                     const res = await fetch(`${base}lowpoly_game_model.glb`, { method: 'HEAD' });
                     if (res.ok) {
@@ -722,7 +764,8 @@ car.getSpeed();</textarea>
                 }
             }
 
-            return '/preview/';
+            // Default to the project directory when no checks succeed
+            return '/CarXSimulator/preview/';
         };
 
         async function startCarX() {
