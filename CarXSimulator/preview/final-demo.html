@@ -192,7 +192,7 @@
         /* Mobile layout optimizations */
         body.mobile { overflow-y: auto; }
         body.mobile #app { flex-direction: column; height: auto; }
-        body.mobile #viewport { height: 65vh; min-height: 360px; }
+        body.mobile #viewport { height: 70vh; min-height: 360px; }
         body.mobile #controls {
             width: 100%;
             height: auto;
@@ -204,14 +204,15 @@
         body.mobile h1 { font-size: 24px; }
         body.mobile .section { padding: 14px; }
         body.mobile .stat-grid { grid-template-columns: 1fr; }
-        body.mobile #hud { left: 12px; top: 12px; padding: 12px 14px; font-size: 12px; }
-        body.mobile #camera-info { right: 12px; top: 12px; }
-        body.mobile .instructions { position: static; margin: 12px; bottom: auto; left: auto; }
+        body.mobile #hud { left: 8px; top: 8px; padding: 8px 10px; font-size: 10px; min-width: auto; transform: scale(0.75); transform-origin: top left; }
+        body.mobile #hud .hud-section { margin-bottom: 6px; padding-bottom: 6px; }
+        body.mobile #camera-info { right: 8px; top: 8px; padding: 8px 10px; font-size: 9px; transform: scale(0.75); transform-origin: top right; }
+        body.mobile .instructions { display: none; }
 
         /* CSS-level mobile fallback so layout remains usable even if JS fails early */
         @media (max-width: 900px) {
             #app { flex-direction: column; height: auto; }
-            #viewport { height: 65vh; min-height: 320px; }
+            #viewport { height: 70vh; min-height: 320px; }
             #controls {
                 width: 100%;
                 height: auto;
@@ -223,9 +224,10 @@
             h1 { font-size: 24px; }
             .section { padding: 14px; }
             .stat-grid { grid-template-columns: 1fr; }
-            #hud { left: 12px; top: 12px; padding: 12px 14px; font-size: 12px; }
-            #camera-info { right: 12px; top: 12px; }
-            .instructions { position: static; margin: 12px; }
+            #hud { left: 8px; top: 8px; padding: 8px 10px; font-size: 10px; min-width: auto; transform: scale(0.75); transform-origin: top left; }
+            #hud .hud-section { margin-bottom: 6px; padding-bottom: 6px; }
+            #camera-info { right: 8px; top: 8px; padding: 8px 10px; font-size: 9px; transform: scale(0.75); transform-origin: top right; }
+            .instructions { display: none; }
         }
 
         /* Mobile control overlay */
@@ -239,11 +241,22 @@
             gap: 12px;
             z-index: 10;
             pointer-events: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
         .mobile-control-panel.visible {
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
+        }
+        /* CSS fallback: show mobile controls on small screens */
+        @media (max-width: 900px), (pointer: coarse) {
+            .mobile-control-panel {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+            }
         }
         .mobile-cluster {
             flex: 1;
@@ -255,6 +268,9 @@
             box-shadow: 0 12px 30px rgba(0,0,0,0.45);
             backdrop-filter: blur(12px);
             color: #e5edff;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
         .mobile-cluster .cluster-title {
             font-size: 12px;
@@ -262,6 +278,8 @@
             text-transform: uppercase;
             color: #9cc4ff;
             margin-bottom: 8px;
+            -webkit-user-select: none;
+            user-select: none;
         }
         .mobile-button {
             background: linear-gradient(135deg, #0f1938 0%, #1b2a55 100%);
@@ -273,6 +291,13 @@
             font-weight: 700;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
             touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            cursor: pointer;
         }
         .mobile-button:active, .mobile-button.active { background: linear-gradient(135deg, #1e305f 0%, #28407b 100%); border-color: rgba(255,255,255,0.25); }
         .mobile-button.pill { border-radius: 12px; padding: 12px 10px; }
@@ -325,8 +350,8 @@
                 </div>
             </div>
             <div class="instructions" id="instructions">
-                <div><kbd>↑</kbd> or <kbd>W</kbd> Throttle | <kbd>↓</kbd> or <kbd>S</kbd> Brake</div>
-                <div><kbd>←</kbd><kbd>→</kbd> or <kbd>A</kbd><kbd>D</kbd> Steer | <kbd>Space</kbd> Handbrake</div>
+                <div><kbd>↑</kbd> or <kbd>W</kbd> Throttle | <kbd>↓</kbd> or <kbd>S</kbd> Reverse</div>
+                <div><kbd>←</kbd><kbd>→</kbd> or <kbd>A</kbd><kbd>D</kbd> Steer | <kbd>Space</kbd> Brake</div>
                 <div><kbd>Drag</kbd> Rotate | <kbd>Wheel</kbd> Zoom | <kbd>C</kbd> Follow | <kbd>R</kbd> Reset | <kbd>G</kbd> Debug</div>
                 <div style="margin-top: 5px; font-size: 10px; opacity: 0.7;">🎮 Professional Physics v2.2 - Pacejka Tires, Load Transfer, Downforce</div>
             </div>
@@ -349,7 +374,7 @@
                     <div class="cluster-title">Drive</div>
                     <div class="mobile-row stack">
                         <button id="btn-throttle" class="mobile-button accent" aria-label="Throttle">↑ Throttle</button>
-                        <button id="btn-brake" class="mobile-button secondary" aria-label="Brake">↓ Brake</button>
+                        <button id="btn-brake" class="mobile-button secondary" aria-label="Reverse">↓ Reverse</button>
                     </div>
                     <div class="mobile-row spread" style="margin-top: 8px;">
                         <button id="btn-follow" class="mobile-button pill wide" aria-label="Toggle follow camera">🎯 Follow</button>
@@ -952,27 +977,48 @@ car.getSpeed();</textarea>
                 const avgGrip = this.tires.reduce((sum, t) => sum + t.grip, 0) / 4;
                 const gripMultiplier = avgGrip * (1 - this.tires[0].wear * 0.3);
                 
-                // Apply forces with grip
-                let engineForce = forward.mul(this.throttle * this.enginePower / this.mass * gripMultiplier);
+                // Check ground contact FIRST before applying forces
+                // Pre-calculate terrain height for ground check
+                const preCheckHeight = terrain.getHeight(this.position.x, this.position.z);
+                const preCheckGroundY = preCheckHeight + this.wheelRadius + this.groundClearance;
+                const isOnGround = this.position.y <= preCheckGroundY + 0.3; // Small tolerance
                 
-                // Traction control
-                if (this.tractionControl && speed > 5 && this.throttle > 0.7) {
-                    engineForce = engineForce.mul(0.85);
+                // Apply forces with grip - ONLY when on ground
+                let engineForce = new Vec3(0, 0, 0);
+                let brakeForce = new Vec3(0, 0, 0);
+                
+                if (isOnGround) {
+                    // Engine force only when wheels are on ground
+                    // Reverse gear has reduced power (about 50% of forward)
+                    const throttleMultiplier = this.throttle < 0 ? 0.5 : 1.0;
+                    engineForce = forward.mul(this.throttle * this.enginePower / this.mass * gripMultiplier * throttleMultiplier);
+                    
+                    // Traction control (only for forward motion)
+                    if (this.tractionControl && speed > 5 && this.throttle > 0.7) {
+                        engineForce = engineForce.mul(0.85);
+                    }
+                    
+                    // Brake force only when on ground
+                    brakeForce = this.velocity.normalized().mul(-this.brake * 25 * gripMultiplier);
+                    
+                    // ABS
+                    if (this.abs && this.brake > 0.8 && speed > 10) {
+                        brakeForce = brakeForce.mul(0.9);
+                    }
                 }
                 
+                // Drag always applies (air resistance)
                 const drag = this.velocity.mul(-0.3 * this.velocity.length());
-                let brakeForce = this.velocity.normalized().mul(-this.brake * 25 * gripMultiplier);
-                
-                // ABS
-                if (this.abs && this.brake > 0.8 && speed > 10) {
-                    brakeForce = brakeForce.mul(0.9);
-                }
                 
                 const totalForce = engineForce.add(drag).add(brakeForce);
                 
                 // Update velocity
                 this.velocity = this.velocity.add(totalForce.mul(dt));
-                if (speed > 60) this.velocity = this.velocity.normalized().mul(60);
+                // Speed limit: 60 m/s forward, 20 m/s reverse
+                const maxSpeed = this.throttle < 0 ? 20 : 60;
+                if (this.velocity.length() > maxSpeed) {
+                    this.velocity = this.velocity.normalized().mul(maxSpeed);
+                }
                 
                 // Update horizontal position
                 this.position.x += this.velocity.x * dt;
@@ -1031,7 +1077,11 @@ car.getSpeed();</textarea>
                               'target:', targetGroundY.toFixed(2));
                 }
                 
-                if (distanceToGround > 0.2) {
+                // Simplified ground detection - car is airborne if above ground threshold
+                // The car should fall if it's above the terrain, regardless of current velocity
+                const isAboveGround = distanceToGround > 0.15;
+                
+                if (isAboveGround) {
                     // Above ground - apply gravity (falling)
                     this.onGround = false;
                     this.airborneTime += dt;
@@ -1132,22 +1182,27 @@ car.getSpeed();</textarea>
                         }
                         this.airborneTime = 0;
                     }
-                } else if (distanceToGround < -0.5) {
+                } else if (distanceToGround < -0.1) {
                     // CRITICAL: Car is underground - FORCE it back up immediately
-                    this.position.y = targetGroundY + 0.5; // Add small offset to ensure it's above ground
+                    this.position.y = targetGroundY;
                     this.verticalVelocity = 0;
                     this.onGround = true;
                     this.airborneTime = 0;
-                    console.warn('⚠️ Underground glitch detected - forcing car up');
+                    if (distanceToGround < -0.5) {
+                        console.warn('⚠️ Underground glitch detected - forcing car up');
+                    }
                 } else {
                     // On or near ground - follow terrain surface
                     this.onGround = true;
                     
-                    // Smooth transition to target height
+                    // Snap to terrain height - more responsive to prevent floating
                     const heightDiff = targetGroundY - this.position.y;
-                    if (Math.abs(heightDiff) > 0.01) {
-                        // Gradually adjust to terrain (prevents jitter)
-                        this.position.y += heightDiff * 0.3;
+                    if (Math.abs(heightDiff) > 0.5) {
+                        // Large difference - snap immediately (terrain changed or glitch)
+                        this.position.y = targetGroundY;
+                    } else if (Math.abs(heightDiff) > 0.02) {
+                        // Small difference - smooth transition for natural feel
+                        this.position.y += heightDiff * 0.5; // Faster response
                     } else {
                         this.position.y = targetGroundY;
                     }
@@ -1619,6 +1674,26 @@ car.getSpeed();</textarea>
                     // Optimize materials and enable shadows
                     carMesh.traverse((child) => {
                         if (child.isMesh) {
+                            // Hide any arrow/direction indicators (often green colored)
+                            // Check if this mesh looks like an arrow indicator
+                            const isArrowIndicator = child.name && (
+                                child.name.toLowerCase().includes('arrow') ||
+                                child.name.toLowerCase().includes('direction') ||
+                                child.name.toLowerCase().includes('indicator')
+                            );
+                            
+                            // Also hide green colored simple geometry (likely direction arrows)
+                            const isGreenArrow = child.material && child.material.color && 
+                                child.material.color.g > 0.7 && 
+                                child.material.color.r < 0.3 && 
+                                child.material.color.b < 0.3;
+                            
+                            if (isArrowIndicator || isGreenArrow) {
+                                child.visible = false;
+                                console.log('✓ Hidden arrow indicator:', child.name || 'unnamed');
+                                return;
+                            }
+                            
                             child.castShadow = true;
                             child.receiveShadow = true;
 
@@ -1835,12 +1910,7 @@ car.getSpeed();</textarea>
         arrowHelper1.visible = false;
         scene.add(arrowHelper1);
 
-        const arrowHelper2 = new THREE.ArrowHelper(
-            new THREE.Vector3(0, -1, 0), 
-            new THREE.Vector3(0, 2, 0), 
-            3, 0x44ff44, 0.5, 0.3
-        );
-        scene.add(arrowHelper2);
+        // Green arrow removed - was showing gravity direction but not needed
         
         // Ground contact debug sphere
         const debugSphereGeom = new THREE.SphereGeometry(0.3, 8, 8);
@@ -1865,24 +1935,45 @@ car.getSpeed();</textarea>
             const el = document.getElementById(id);
             if (!el) return;
 
+            let isPressed = false;
+
             const press = (e) => {
                 e.preventDefault();
+                e.stopPropagation();
+                if (isPressed) return;
+                isPressed = true;
                 toggleKeyGroup(keyNames, true);
                 el.classList.add('active');
             };
 
             const release = (e) => {
-                if (e) e.preventDefault();
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                if (!isPressed) return;
+                isPressed = false;
                 toggleKeyGroup(keyNames, false);
                 el.classList.remove('active');
             };
 
-            ['touchstart', 'mousedown'].forEach((event) => el.addEventListener(event, press, { passive: false }));
-            ['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach((event) => el.addEventListener(event, release));
+            // Prevent text selection and context menu
+            el.addEventListener('selectstart', (e) => e.preventDefault());
+            el.addEventListener('contextmenu', (e) => e.preventDefault());
+
+            // Touch events (primary for mobile)
+            el.addEventListener('touchstart', press, { passive: false });
+            el.addEventListener('touchend', release, { passive: false });
+            el.addEventListener('touchcancel', release, { passive: false });
+
+            // Mouse events (fallback for desktop testing)
+            el.addEventListener('mousedown', press);
+            el.addEventListener('mouseup', release);
+            el.addEventListener('mouseleave', release);
         };
 
         const setupMobileControls = () => {
-            if (!isMobileDevice() || !mobileControlsPanel) return;
+            // Always bind mobile controls (CSS handles visibility)
             bindMobileButton('btn-throttle', ['ArrowUp', 'KeyW', 'w', 'W']);
             bindMobileButton('btn-brake', ['ArrowDown', 'KeyS', 's', 'S']);
             bindMobileButton('btn-steer-left', ['ArrowLeft', 'KeyA', 'a', 'A']);
@@ -1890,16 +1981,27 @@ car.getSpeed();</textarea>
             bindMobileButton('btn-handbrake', [' ', 'Space']);
 
             const followBtn = document.getElementById('btn-follow');
-            if (followBtn) followBtn.addEventListener('click', () => toggleCameraFollow());
+            if (followBtn) {
+                followBtn.addEventListener('click', (e) => { e.preventDefault(); toggleCameraFollow(); });
+                followBtn.addEventListener('touchend', (e) => { e.preventDefault(); toggleCameraFollow(); });
+            }
 
             const resetBtn = document.getElementById('btn-reset');
-            if (resetBtn) resetBtn.addEventListener('click', () => resetCar());
+            if (resetBtn) {
+                resetBtn.addEventListener('click', (e) => { e.preventDefault(); resetCar(); });
+                resetBtn.addEventListener('touchend', (e) => { e.preventDefault(); resetCar(); });
+            }
 
             const debugBtn = document.getElementById('btn-debug');
-            if (debugBtn) debugBtn.addEventListener('click', () => {
-                debugSphere.visible = !debugSphere.visible;
-                console.log('✓ Ground debug:', debugSphere.visible ? 'ON' : 'OFF');
-            });
+            if (debugBtn) {
+                const toggleDebug = (e) => {
+                    e.preventDefault();
+                    debugSphere.visible = !debugSphere.visible;
+                    console.log('✓ Ground debug:', debugSphere.visible ? 'ON' : 'OFF');
+                };
+                debugBtn.addEventListener('click', toggleDebug);
+                debugBtn.addEventListener('touchend', toggleDebug);
+            }
         };
         let paused = false;
         
@@ -1976,7 +2078,30 @@ car.getSpeed();</textarea>
 
 
         // Input handling - MUST be after keys object is defined
+        // Helper to check if user is typing in an input field
+        const isTypingInInput = () => {
+            const activeEl = document.activeElement;
+            const tagName = activeEl ? activeEl.tagName.toLowerCase() : '';
+            return tagName === 'input' || tagName === 'textarea' || tagName === 'select' || activeEl.isContentEditable;
+        };
+
+        // Clear all keys when focus changes to prevent stuck keys
+        const clearAllKeys = () => {
+            Object.keys(keys).forEach(key => { keys[key] = false; });
+        };
+
+        // Clear keys when code editor or any input gets focus
+        document.getElementById('code-editor').addEventListener('focus', clearAllKeys);
+        document.querySelectorAll('input, select').forEach(el => {
+            el.addEventListener('focus', clearAllKeys);
+        });
+
         document.addEventListener('keydown', (e) => {
+            // Skip car controls when typing in input fields
+            if (isTypingInInput()) {
+                return;
+            }
+            
             keys[e.key] = true;
             keys[e.code] = true;
             
@@ -2008,6 +2133,11 @@ car.getSpeed();</textarea>
         });
         
         document.addEventListener('keyup', (e) => {
+            // Skip when typing in input fields
+            if (isTypingInInput()) {
+                return;
+            }
+            
             keys[e.key] = false;
             keys[e.code] = false;
             
@@ -2158,7 +2288,12 @@ car.getSpeed();</textarea>
         
         // Click viewport to focus for keyboard controls
         canvas.addEventListener('click', () => {
-            canvas.focus();
+            // Blur any active input/textarea to enable car controls
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || 
+                document.activeElement.tagName === 'TEXTAREA' || 
+                document.activeElement.tagName === 'SELECT')) {
+                document.activeElement.blur();
+            }
             document.getElementById('instructions').style.opacity = '1';
         });
         
@@ -2331,14 +2466,32 @@ car.getSpeed();</textarea>
             
             if (!paused) {
                 // Handle all controls - check both key and code (KeyW, KeyA, KeyS, KeyD)
-                car.throttle = (keys['ArrowUp'] || keys['w'] || keys['W'] || keys['KeyW']) ? 1 : 0;
-                car.brake = (keys['ArrowDown'] || keys['s'] || keys['S'] || keys['KeyS']) ? 1 : 0;
-                car.steering = ((keys['ArrowLeft'] || keys['a'] || keys['A'] || keys['KeyA']) ? -1 : 0) + 
-                              ((keys['ArrowRight'] || keys['d'] || keys['D'] || keys['KeyD']) ? 1 : 0);
+                // Forward throttle
+                const forwardPressed = keys['ArrowUp'] || keys['w'] || keys['W'] || keys['KeyW'];
+                // Reverse (S/Down key now reverses instead of braking)
+                const reversePressed = keys['ArrowDown'] || keys['s'] || keys['S'] || keys['KeyS'];
                 
-                // Handbrake (Space key)
+                if (forwardPressed) {
+                    car.throttle = 1;
+                    car.brake = 0;
+                } else if (reversePressed) {
+                    car.throttle = -1; // Reverse gear
+                    car.brake = 0;
+                } else {
+                    car.throttle = 0;
+                }
+                
+                // Steering - FIXED: Left key steers left (positive), Right key steers right (negative)
+                // Swapped the signs to fix inverted steering
+                car.steering = ((keys['ArrowLeft'] || keys['a'] || keys['A'] || keys['KeyA']) ? 1 : 0) + 
+                              ((keys['ArrowRight'] || keys['d'] || keys['D'] || keys['KeyD']) ? -1 : 0);
+                
+                // Handbrake (Space key) - now acts as brake complement
                 if (keys[' '] || keys['Space']) {
-                    car.brake = 1.5; // Stronger braking
+                    car.brake = 1; // Apply brakes when handbrake is pressed
+                    car.throttle = 0; // Cut throttle when braking
+                } else if (!forwardPressed && !reversePressed) {
+                    car.brake = 0; // No brake when not pressing handbrake
                 }
 
                 // Run physics with fixed timestep - multiple steps if needed for slow devices
@@ -2441,8 +2594,6 @@ car.getSpeed();</textarea>
                     arrowHelper1.visible = false;
                 }
 
-                arrowHelper2.position.set(car.position.x, car.position.y + 2, car.position.z);
-                
                 // Update debug sphere to show ground contact point
                 if (debugSphere.visible) {
                     const terrainHeight = terrain.getHeight(car.position.x, car.position.z);
@@ -2457,6 +2608,15 @@ car.getSpeed();</textarea>
                     if (typeof spawnVegetation === 'function' && vegetationLoaded) {
                         spawnVegetation();
                     }
+                    
+                    // Smoothly adjust car to new terrain height to prevent floating/sinking
+                    const newTerrainHeight = terrain.getHeight(car.position.x, car.position.z);
+                    const targetY = newTerrainHeight + car.wheelRadius + car.groundClearance;
+                    if (car.onGround && Math.abs(car.position.y - targetY) > 0.5) {
+                        car.position.y = targetY;
+                        car.verticalVelocity = 0;
+                    }
+                    
                     showNotification('🗺️ Terrain auto-generated', 'info');
                 }
                 
