@@ -1,178 +1,233 @@
-# CarX Simulator API Documentation
+# CarX Simulator - API Reference
 
-## Physics Engine API
+Complete API documentation for the CarX Physics Simulator.
 
-### Car Class
+## Quick Start
+
+### Basic Setup (C++)
+```cpp
+#include "PhysicsEngine.h"
+#include "CodeExecutor.h"
+
+PhysicsEngine physics;
+CodeExecutor executor(&physics);
+executor.registerAPI();
+
+// Create terrain and car
+executor.execute("loadTerrainPreset hills");
+executor.execute("createCar 0 5 0 1200 150000");
+
+// Game loop
+while (running) {
+    physics.update(1.0f / 60.0f);
+    render();
+}
+```
+
+### Web Preview
+```bash
+cd preview
+python -m http.server 8080
+# Open http://localhost:8080/final-demo.html
+```
+
+---
+
+## Core Classes
+
+### Car
 
 ```cpp
 Car(const Vector3& position);
 ```
 
 #### Control Methods
-- `void applyThrottle(float amount)` - Apply throttle (-1 to 1)
-- `void applySteering(float angle)` - Apply steering angle in radians
-- `void applyBrake(float amount)` - Apply brake force (0 to 1)
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| `applyThrottle(float)` | -1 to 1 | Throttle/reverse |
+| `applySteering(float)` | -1 to 1 | Steering angle |
+| `applyBrake(float)` | 0 to 1 | Brake force |
 
-#### Physics Properties
-- `void setMass(float m)` - Set car mass in kg
-- `void setWheelbase(float wb)` - Set wheelbase in meters
-- `void setDragCoefficient(float cd)` - Set aerodynamic drag coefficient
+#### Properties
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| `setMass(float)` | kg | Vehicle mass |
+| `setEnginePower(float)` | Watts | Engine power |
+| `setWheelbase(float)` | meters | Axle distance |
+| `setTireGrip(float)` | 0.5-2.0 | Grip coefficient |
+| `setDragCoefficient(float)` | 0.2-0.5 | Aero drag |
+| `setTractionControl(bool)` | true/false | TC system |
+| `setAntiLockBrakes(bool)` | true/false | ABS system |
+| `setDifferentialType(int)` | 0/1/2 | Open/LSD/Locked |
 
 #### Getters
-- `Vector3 getPosition()` - Get current position
-- `Vector3 getVelocity()` - Get current velocity
-- `float getSpeed()` - Get speed magnitude
-- `Quaternion getRotation()` - Get orientation
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `getPosition()` | Vector3 | World position |
+| `getVelocity()` | Vector3 | Velocity vector |
+| `getSpeed()` | float | Speed (m/s) |
+| `getRotation()` | float | Yaw angle (rad) |
+| `getRPM()` | float | Engine RPM |
+| `getGear()` | int | Current gear |
 
-#### Force Analysis
-- `Vector3 getCentripetalForce()` - Get centripetal force vector
-- `Vector3 getCentrifugalForce()` - Get centrifugal force (reaction)
-- `Vector3 getGravityForce(const Vector3& terrainNormal)` - Get gravity adjusted for terrain
 
-### Terrain Class
+### Terrain
 
 ```cpp
 Terrain(int width = 100, int depth = 100);
 ```
 
-#### Methods
-- `void generateProcedural(float amplitude, float frequency)` - Generate procedural terrain
-- `bool loadHeightmap(const std::string& filename)` - Load from heightmap image
-- `float getHeight(float x, float z)` - Get interpolated height at position
-- `Vector3 getNormal(float x, float z)` - Get terrain normal
-- `Vector3 getGravityDirection(float x, float z)` - Get gravity direction affected by curvature
-- `void setCurvature(float c)` - Set terrain curvature (0-1)
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| `generateProcedural(float, float)` | amplitude, frequency | Generate terrain |
+| `generateByType(TerrainType)` | enum | Use preset type |
+| `getHeight(float, float)` | x, z | Get height at point |
+| `getNormal(float, float)` | x, z | Get surface normal |
+| `addObstacle(x, z, r, h)` | position, size | Add obstacle |
+| `addRamp(x, z, w, l, h)` | position, dimensions | Add ramp |
+| `setMaterialZone(x, z, r, f)` | position, friction | Set friction zone |
+| `smoothTerrain(int)` | iterations | Smooth surface |
 
-### PhysicsEngine Class
+### PhysicsEngine
 
 ```cpp
 PhysicsEngine();
 ```
 
-#### Methods
-- `void update(float deltaTime)` - Update physics simulation
-- `Car* createCar(const Vector3& position)` - Create new car
-- `void setTerrain(std::unique_ptr<Terrain> terrain)` - Set terrain
-- `void setGravity(const Vector3& g)` - Set gravity vector
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| `update(float)` | deltaTime | Step simulation |
+| `createCar(Vector3)` | position | Create car |
+| `setTerrain(unique_ptr)` | terrain | Set terrain |
+| `setGravity(Vector3)` | gravity | Set gravity |
 
-## Code Execution API
+---
 
-### Car Commands
-
-```cpp
-// Create a car at position with optional mass and power
-createCar <x> <y> <z> [mass] [power]
-
-// Car control
-setThrottle <amount>      // -1.0 to 1.0
-setSteering <angle>       // -1.0 to 1.0
-setBrake <amount>         // 0.0 to 1.0
-
-// Car properties
-setCarMass <kg>           // Mass in kilograms
-setTireGrip <coeff>       // 0.5 to 2.0 (1.0 = normal)
-```
+## Script Commands
 
 ### Terrain Commands
-
-```cpp
-// Load terrain preset
-loadTerrainPreset <type>  // flat, hills, mountains, valley, racetrack
-
-// Generate custom terrain
-generateTerrain <amplitude> <frequency> [curvature]
-
-// Set gravity vector
-setGravity <x> <y> <z>
+```
+loadTerrainPreset <type>     # flat, hills, mountains, valley, racetrack
+generateTerrain <amp> <freq> # Custom procedural
+addObstacle <x> <z> <r> <h>  # Add obstacle
+addRamp <x> <z> <w> <l> <h>  # Add ramp
+smoothTerrain [iterations]   # Smooth terrain
 ```
 
-### Simulation Commands
-
-```cpp
-// Reset simulation
-reset
+### Car Commands
+```
+createCar <x> <y> <z> [mass] [power]  # Create car
+setThrottle <-1 to 1>                 # Throttle
+setSteering <-1 to 1>                 # Steering
+setBrake <0 to 1>                     # Brake
+setCarMass <kg>                       # Set mass
+setTireGrip <0.5 to 2.0>              # Set grip
+setTractionControl <0/1>              # TC on/off
+setABS <0/1>                          # ABS on/off
 ```
 
-### Examples
-
-```cpp
-// Race track setup
-loadTerrainPreset racetrack
-createCar 0 5 0 1200 180000
-setTireGrip 1.2
-
-// Mountain driving
-loadTerrainPreset mountains
-createCar -20 15 0 1500 150000
-setGravity 0 -9.81 0
-
-// Low gravity test
-loadTerrainPreset hills
-createCar 0 5 0
-setGravity 0 -3.0 0
-
-// High performance car
-createCar 0 5 0 1000 250000
-setTireGrip 1.5
-setThrottle 0.8
+### Physics Commands
+```
+setGravity <x> <y> <z>   # Set gravity vector
+reset                     # Reset simulation
 ```
 
-## WebAssembly Exports
+---
+
+## Usage Examples
+
+### Racing Setup
+```cpp
+executor.execute("loadTerrainPreset racetrack");
+executor.execute("createCar 0 5 0 1100 200000");
+executor.execute("setTireGrip 1.5");
+executor.execute("setTractionControl 1");
+executor.execute("setABS 1");
+```
+
+### Rally Setup
+```cpp
+auto terrain = std::make_unique<Terrain>(100, 100);
+terrain->generateByType(TerrainType::HILLS);
+terrain->addRamp(20, 30, 10, 20, 8);
+terrain->setMaterialZone(-15, -15, 10, 0.6f);  // Mud
+physics.setTerrain(std::move(terrain));
+
+Car* car = physics.createCar(Vector3(0, 5, 0));
+car->setMass(1100.0f);
+car->setSuspensionStiffness(40000.0f);
+car->setTireGrip(1.2f);
+car->setTractionControl(true);
+```
+
+### Stunt Course
+```cpp
+executor.execute("loadTerrainPreset flat");
+executor.execute("addRamp 0 20 12 25 10");
+executor.execute("addObstacle 30 30 8 5");
+executor.execute("createCar 0 5 0 1000 180000");
+```
+
+---
+
+## WebAssembly API
 
 ```javascript
-// Initialize engine
+// Initialize
 Module.ccall('initEngine', null, ['number', 'number'], [width, height]);
 
 // Execute code
-const result = Module.ccall('executeCode', 'number', ['string'], [code]);
-
-// Get error message
-const error = Module.ccall('getLastError', 'string', [], []);
+Module.ccall('executeCode', 'number', ['string'], [code]);
 
 // Update physics
 Module.ccall('updatePhysics', null, ['number'], [deltaTime]);
+
+// Get error
+Module.ccall('getLastError', 'string', [], []);
 ```
 
-## Mobile Library Exports
-
-### React Native / Flutter
+## Mobile Library API
 
 ```cpp
 // Initialize
 CarX_Initialize(width, height);
 
-// Execute code
+// Execute
 int success = CarX_ExecuteCode("createCar 0 5 0");
 
-// Get error
-const char* error = CarX_GetLastError();
-
-// Update and render
+// Update
 CarX_Update(deltaTime);
 CarX_Render();
 
-// Get car data
-int count = CarX_GetCarCount();
-float x, y, z;
+// Get data
 CarX_GetCarPosition(0, &x, &y, &z);
 ```
 
-## Physics Concepts
+---
+
+## Physics Reference
 
 ### Centripetal Force
-Force directed toward the center of circular motion:
 ```
 F_c = m * v² / r
 ```
 
-### Centrifugal Force
-Apparent outward force in rotating reference frame (reaction to centripetal):
+### Aerodynamic Drag
 ```
-F_cf = -F_c
+F_d = 0.5 * ρ * Cd * A * v²
 ```
 
-### Curved Terrain Gravity
-Gravity direction adjusted by terrain curvature:
+### Tire Grip
 ```
-g' = g * (1 - curvature) + normal * (-curvature)
+F_max = μ * N
 ```
+Where μ = grip coefficient, N = normal force
+
+---
+
+## See Also
+
+- [ADVANCED_VEHICLE_DYNAMICS.md](ADVANCED_VEHICLE_DYNAMICS.md) - Professional physics
+- [PHYSICS_COMPONENTS_AND_EXPERIMENTS.md](PHYSICS_COMPONENTS_AND_EXPERIMENTS.md) - Code experiments
+- [BUILDING.md](BUILDING.md) - Build instructions
+- [TECHNOLOGY.md](TECHNOLOGY.md) - Tech stack overview

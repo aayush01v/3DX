@@ -108,26 +108,31 @@ cmake --build .
 
 ## 📖 Documentation
 
-### 🆕 Latest Updates (v2.2)
-- **[ADVANCED_VEHICLE_DYNAMICS.md](docs/ADVANCED_VEHICLE_DYNAMICS.md)** - ⭐ Professional vehicle dynamics guide
-- **[PHYSICS_FIXES.md](docs/PHYSICS_FIXES.md)** - Complete physics documentation
-
-### Documentation
-- **[IMPROVEMENTS.md](docs/IMPROVEMENTS.md)** - Detailed guide to all new features
-- **[QUICK_START.md](docs/QUICK_START.md)** - Get started in 5 minutes
-
-### Essential Guides
-- **[Preview README](preview/README.md)** - How to run the web demo
-
-### C++ Development
-- **[API Documentation](docs/API.md)** - C++ API reference
+### Getting Started
+- **[API Reference](docs/API.md)** - Quick start & API documentation
 - **[Building Guide](docs/BUILDING.md)** - Compilation instructions
-- **[Model Integration](docs/MODEL_INTEGRATION.md)** - 3D model loading
+- **[Technology Stack](docs/TECHNOLOGY.md)** - Tech overview & modification guide
+
+### Core Documentation
+- **[Project Architecture](docs/PROJECT_ARCHITECTURE.md)** - System design & integration
+- **[Advanced Vehicle Dynamics](docs/ADVANCED_VEHICLE_DYNAMICS.md)** - Professional physics (Pacejka, load transfer)
+- **[Unified Scene System](docs/UNIFIED_SCENE_SYSTEM.md)** - Cross-platform scene definition
+
+### 3D Pipeline & Blender Tools
+- **[Model Integration](docs/MODEL_INTEGRATION.md)** - 3D models & Blender workflow
+- **[Blender Tools](tools/README.md)** - Import/export pipeline for Blender
+- **[Pipeline Guide](tools/PIPELINE_GUIDE.md)** - Blender ↔ Three.js transforms
+- **[Quick Reference](tools/QUICK_REFERENCE.md)** - Blender tools cheat sheet
+
+### Physics & Experiments
+- **[Physics Experiments](docs/PHYSICS_COMPONENTS_AND_EXPERIMENTS.md)** - Interactive code experiments
 
 ### Examples
 - **[Basic Car](examples/basic_car.cpp)** - Simple car simulation
 - **[Advanced Physics](examples/advanced_physics.cpp)** - Complex scenarios
 - **[Curved Terrain](examples/curved_terrain.cpp)** - Terrain interaction
+
+📚 **[Full Documentation Index](docs/README.md)**
 
 ## 🔧 Troubleshooting
 
@@ -295,10 +300,16 @@ docker build -t carx-simulator .
 docker run -p 8080:80 carx-simulator
 ```
 
-**Mobile (React Native):**
+**Android APK (Native):**
 ```bash
-npx react-native init MyApp
-# Add WebView with simulator URL
+# Build debug APK
+npm run build:apk
+
+# Or manually
+cd android
+./gradlew assembleDebug
+
+# APK: android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 **Desktop (Native C++):**
@@ -332,16 +343,17 @@ Download pre-built binaries for Windows, macOS, and Linux from [Releases](https:
 
 ## 🎯 Project Status
 
-- ✅ **v2.2 Professional Physics** - Pacejka tires, load transfer, downforce
+- ✅ **v2.3.1** - Android APK support, terrain fixes
+- ✅ **v2.3.0** - Professional Physics with Pacejka tires
 - ✅ Web preview fully functional with all features
 - ✅ Physics engine complete with industry-standard models
 - ✅ Interactive camera system
 - ✅ Code editor with 18 experiments
-- ✅ Cross-platform ready
+- ✅ Cross-platform ready (Web, Android, Desktop)
 - ✅ Docker support
 - ✅ CI/CD pipeline
-- 🚧 Native desktop builds (in progress)
-- 🚧 Mobile apps (in progress)
+- ✅ Android APK build system
+- 🚧 iOS app (in progress)
 
 ---
 

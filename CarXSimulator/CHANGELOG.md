@@ -2,6 +2,91 @@
 
 All notable changes to the CarX Simulator project.
 
+## [2.3.1] - 2024-11-28
+
+### 📱 Android APK Support & Terrain Fixes
+
+#### Added - Android Build System
+- **Complete Android Project**: Native APK build with WebView wrapper
+- **Fullscreen Immersive Mode**: Landscape-only, no system bars
+- **Hardware Acceleration**: WebGL enabled via Android WebView
+- **Touch Controls**: Mobile controls work natively
+- **App Icon**: Custom adaptive icon with car design
+- **Build Scripts**: `npm run build:apk` for easy building
+- **Documentation**: `BUILD_APK.md` with complete instructions
+
+#### Fixed - Terrain System
+- **Terrain Mesh Height**: Fixed vertex height calculation (was inverted)
+- **Car Ground Contact**: Car now properly sits on terrain instead of floating
+- **Ground Detection**: Simplified threshold (0.1m) for reliable detection
+- **Spring Physics**: Improved on-ground terrain following
+- **Reset Functions**: Car spawns exactly on ground level
+
+#### Added - Project Documentation
+- **PROJECT_ARCHITECTURE.md**: Complete architecture guide
+- **Integration Pipelines**: Blender, Unreal Engine, Unity guides
+- **Vulkan Migration**: Detailed migration path from OpenGL
+- **Cross-Platform Matrix**: All supported platforms documented
+
+#### Improved - Mobile UI
+- **Minimal Controls**: Cleaner, more transparent touch buttons
+- **Larger Viewport**: 85vh on mobile (was 75vh)
+- **Simplified HUD**: Only speed/RPM/gear shown on mobile
+- **Responsive Layout**: Better small screen support
+
+---
+
+## [2.3.0] - 2024-11-28
+
+### 🚀 Performance Optimizations, Physics Overhaul & Bug Fixes
+
+This release brings major physics improvements, performance optimizations, and bug fixes.
+
+#### 🏎️ Advanced Physics System
+
+##### Pacejka Tire Model
+- **Magic Formula Implementation**: Industry-standard tire grip calculation
+- **Slip Ratio Calculation**: Realistic longitudinal slip for acceleration/braking
+- **Slip Angle Tracking**: Per-wheel slip angles for cornering dynamics
+- **Tire Type Parameters**: Different B, C, D, E coefficients for street/sport/racing/offroad
+
+##### Suspension Physics
+- **Spring-Damper Model**: Proper suspension simulation with configurable spring rate and damping
+- **Per-Wheel Compression**: Independent suspension travel for each wheel
+- **Suspension Velocity Tracking**: Damping based on compression rate
+- **Stiffness Settings Now Functional**: Soft/Medium/Stiff actually affects physics
+
+##### Understeer/Oversteer Dynamics
+- **Speed-Dependent Steering**: Natural understeer at high speeds
+- **Yaw Rate Simulation**: Realistic rotational dynamics
+- **Lateral Velocity Tracking**: Side-slip calculation for drift physics
+- **Cornering Force Balance**: Front/rear grip balance affects handling
+
+##### Realistic Engine Model
+- **Gear Ratio Simulation**: 6-speed transmission with realistic ratios
+- **Final Drive Calculation**: Proper RPM based on wheel speed
+- **RPM Limits**: 800 idle to 7000 redline
+
+#### Performance Improvements
+- **DOM Caching**: All frequently-accessed DOM elements cached at startup
+- **Terrain Distance Check**: Replaced sqrt() with squared distance comparison
+- **Function Hoisting**: Moved `getTerrainNormal` outside animation loop
+- **Reduced Console Spam**: Debug logging disabled in production
+
+#### Bug Fixes
+- **Memory Leak Fix**: Proper disposal of tree geometries and materials
+- **Underground Recovery**: Velocity reduction when recovering from underground
+- **Ground Detection**: Increased threshold to prevent jittering
+- **Touch Controls**: Fixed mobile touch events conflicting with camera
+- **Initial Car Position**: Car spawns at correct terrain height
+
+#### Code Quality
+- **Resource Cleanup**: Added `beforeunload` handler for Three.js disposal
+- **Null Checks**: Safety checks for all cached DOM elements
+- **Comprehensive Documentation**: Added DEBUGGING_ANALYSIS.md
+
+---
+
 ## [2.2.0] - 2024-11-23
 
 ### 🏎️ Professional Vehicle Dynamics

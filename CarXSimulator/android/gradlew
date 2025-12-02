@@ -1,0 +1,16 @@
+#!/bin/bash
+# Gradle wrapper script - downloads gradle if needed
+
+GRADLE_VERSION="8.4"
+GRADLE_HOME="$HOME/.gradle/wrapper/dists/gradle-${GRADLE_VERSION}-bin"
+
+if [ ! -d "$GRADLE_HOME" ]; then
+    echo "Downloading Gradle ${GRADLE_VERSION}..."
+    mkdir -p "$HOME/.gradle/wrapper/dists"
+    curl -L "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o /tmp/gradle.zip
+    unzip -q /tmp/gradle.zip -d "$HOME/.gradle/wrapper/dists"
+    rm /tmp/gradle.zip
+fi
+
+export PATH="$GRADLE_HOME/gradle-${GRADLE_VERSION}/bin:$PATH"
+gradle "$@"

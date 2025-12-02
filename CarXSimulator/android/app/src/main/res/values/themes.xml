@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.CarXSimulator" parent="android:Theme.Holo.Light.NoActionBar">
+        <item name="android:windowBackground">#000000</item>
+    </style>
+
+    <style name="Theme.CarXSimulator.Fullscreen" parent="Theme.CarXSimulator">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+</resources>

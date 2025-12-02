@@ -1,0 +1,79 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.carx.simulator'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.carx.simulator"
+        minSdk 24
+        targetSdk 34
+        versionCode 24
+        versionName "2.3.1"
+        
+        // NDK configuration for native C++ build
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+        }
+        
+        externalNativeBuild {
+            ndkBuild {
+                arguments "APP_STL=c++_shared"
+                cppFlags "-std=c++17 -fexceptions -frtti"
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+            debuggable true
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    
+    // NDK build configuration
+    externalNativeBuild {
+        ndkBuild {
+            path file('src/main/jni/Android.mk')
+        }
+    }
+
+    // Copy web assets from preview folder
+    sourceSets {
+        main {
+            assets.srcDirs = ['src/main/assets']
+            jniLibs.srcDirs = ['src/main/jniLibs']
+        }
+    }
+}
+
+dependencies {
+    // No external dependencies - using native Android APIs only for AIDE compatibility
+}
+
+// Task to copy preview files to assets
+task copyWebAssets(type: Copy) {
+    from '../../preview'
+    into 'src/main/assets/www'
+    include '**/*.html'
+    include '**/*.js'
+    include '**/*.css'
+    include '**/*.glb'
+    include '**/*.exr'
+    include '**/*.json'
+    include 'vendor/**'
+}
+
+preBuild.dependsOn copyWebAssets

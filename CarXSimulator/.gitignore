@@ -14,3 +14,12 @@ cmake-build-*/
 compile_commands.json
 *.user
 node_modules/
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/www/
+*.apk
+*.aab
+local.properties

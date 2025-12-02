@@ -189,102 +189,277 @@
             border-radius: 3px;
         }
 
-        /* Mobile layout optimizations */
+        /* Mobile layout - maximize viewport, minimize controls panel */
         body.mobile { overflow-y: auto; }
         body.mobile #app { flex-direction: column; height: auto; }
-        body.mobile #viewport { height: 65vh; min-height: 360px; }
+        body.mobile #viewport { height: 92vh; min-height: 520px; } /* Larger viewport on mobile */
         body.mobile #controls {
             width: 100%;
             height: auto;
-            padding: 16px;
+            padding: 10px;
             box-shadow: none;
             border-left: none;
-            border-top: 1px solid rgba(255,255,255,0.25);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            max-height: 40vh;
+            overflow-y: auto;
         }
-        body.mobile h1 { font-size: 24px; }
-        body.mobile .section { padding: 14px; }
+        body.mobile h1 { font-size: 22px; }
+        body.mobile .section { padding: 12px; }
         body.mobile .stat-grid { grid-template-columns: 1fr; }
-        body.mobile #hud { left: 12px; top: 12px; padding: 12px 14px; font-size: 12px; }
-        body.mobile #camera-info { right: 12px; top: 12px; }
-        body.mobile .instructions { position: static; margin: 12px; bottom: auto; left: auto; }
+        /* Minimal HUD on mobile - only essential info */
+        body.mobile #hud { 
+            left: 6px; 
+            top: 6px; 
+            padding: 6px 10px; 
+            font-size: 10px; 
+            min-width: auto; 
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            box-shadow: none;
+        }
+        body.mobile #hud .hud-section { margin-bottom: 4px; padding-bottom: 4px; }
+        body.mobile #hud .hud-section:first-child { display: none; } /* Hide title on mobile */
+        body.mobile #hud .hud-section:nth-child(3),
+        body.mobile #hud .hud-section:nth-child(4) { display: none; } /* Hide systems & tire info */
+        
+        /* Hide camera info on mobile - not needed */
+        body.mobile #camera-info { display: none; }
+        body.mobile .instructions { display: none; }
 
         /* CSS-level mobile fallback so layout remains usable even if JS fails early */
         @media (max-width: 900px) {
             #app { flex-direction: column; height: auto; }
-            #viewport { height: 65vh; min-height: 320px; }
+            #viewport { height: 92vh; min-height: 520px; } /* Match JS/mobile rule for bigger 3D scene */
             #controls {
                 width: 100%;
                 height: auto;
-                padding: 16px;
+                padding: 10px;
                 box-shadow: none;
                 border-left: none;
-                border-top: 1px solid rgba(255,255,255,0.25);
+                border-top: 1px solid rgba(255,255,255,0.1);
+                max-height: 40vh;
+                overflow-y: auto;
             }
-            h1 { font-size: 24px; }
-            .section { padding: 14px; }
-            .stat-grid { grid-template-columns: 1fr; }
-            #hud { left: 12px; top: 12px; padding: 12px 14px; font-size: 12px; }
-            #camera-info { right: 12px; top: 12px; }
-            .instructions { position: static; margin: 12px; }
+            h1 { font-size: 20px; }
+            .section { padding: 10px; margin-bottom: 12px; }
+            .stat-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+            /* Minimal HUD */
+            #hud { 
+                left: 6px; 
+                top: 6px; 
+                padding: 6px 10px; 
+                font-size: 10px; 
+                min-width: auto; 
+                background: rgba(0, 0, 0, 0.4);
+                backdrop-filter: blur(6px);
+                -webkit-backdrop-filter: blur(6px);
+                border-radius: 10px;
+                box-shadow: none;
+            }
+            #hud .hud-section { margin-bottom: 4px; padding-bottom: 4px; }
+            #hud .hud-section:first-child { display: none; }
+            #hud .hud-section:nth-child(3),
+            #hud .hud-section:nth-child(4) { display: none; }
+            #camera-info { display: none; }
+            .instructions { display: none; }
         }
 
-        /* Mobile control overlay */
+        /* ========== MOBILE CONTROLS - Minimal Racing Style ========== */
         .mobile-control-panel {
             display: none;
             position: absolute;
-            bottom: 16px;
+            bottom: 0;
             left: 0;
             right: 0;
-            padding: 0 16px;
-            gap: 12px;
-            z-index: 10;
+            top: 0;
             pointer-events: none;
+            z-index: 10;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
-        .mobile-control-panel.visible {
+        
+        /* Show on mobile/touch devices */
+        @media (max-width: 900px), (pointer: coarse) {
+            .mobile-control-panel { display: block; }
+        }
+        .mobile-control-panel.visible { display: block; }
+        
+        /* Left side - Steering */
+        .steer-zone {
+            position: absolute;
+            left: 10px;
+            bottom: 15px;
             display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-        .mobile-cluster {
-            flex: 1;
+            gap: 8px;
             pointer-events: auto;
-            background: rgba(5, 8, 22, 0.8);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 16px;
-            padding: 12px;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.45);
-            backdrop-filter: blur(12px);
-            color: #e5edff;
         }
-        .mobile-cluster .cluster-title {
-            font-size: 12px;
-            letter-spacing: 0.4px;
-            text-transform: uppercase;
-            color: #9cc4ff;
-            margin-bottom: 8px;
+        
+        /* Right side - Pedals (stacked vertically) */
+        .pedal-zone {
+            position: absolute;
+            right: 10px;
+            bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: auto;
         }
-        .mobile-button {
-            background: linear-gradient(135deg, #0f1938 0%, #1b2a55 100%);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: #e5edff;
-            border-radius: 14px;
-            padding: 12px;
-            font-size: 13px;
-            font-weight: 700;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+        
+        /* Center - Gear shift (horizontal layout) */
+        .gear-zone {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            pointer-events: auto;
+        }
+        
+        /* Quick actions - top right corner */
+        .action-zone {
+            position: absolute;
+            right: 10px;
+            top: 60px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            pointer-events: auto;
+        }
+        
+        /* Base button - minimal glass style */
+        .touch-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            cursor: pointer;
+            transition: transform 0.08s, background 0.08s;
         }
-        .mobile-button:active, .mobile-button.active { background: linear-gradient(135deg, #1e305f 0%, #28407b 100%); border-color: rgba(255,255,255,0.25); }
-        .mobile-button.pill { border-radius: 12px; padding: 12px 10px; }
-        .mobile-button.ghost { background: rgba(255,255,255,0.05); border-style: dashed; color: #c9dbff; }
-        .mobile-button.accent { background: linear-gradient(135deg, #1f8cff 0%, #56c5ff 100%); color: #0c1226; }
-        .mobile-button.secondary { background: linear-gradient(135deg, #0f1b3a 0%, #132449 100%); }
-        .mobile-row { display: flex; gap: 10px; }
-        .mobile-row.stack { flex-direction: column; }
-        .mobile-row.spread { justify-content: space-between; }
-        .mobile-row .wide { flex: 1; }
-        .mobile-row .half { flex: 0.5; }
-        body.mobile #instructions { font-size: 11px; }
+        .touch-btn:active, .touch-btn.active {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Steering - rounded rectangles */
+        .steer-btn {
+            width: 56px;
+            height: 50px;
+            border-radius: 12px;
+            font-size: 22px;
+        }
+        
+        /* Pedals - taller buttons */
+        .pedal-btn {
+            width: 60px;
+            height: 56px;
+            border-radius: 12px;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+        .pedal-btn.gas {
+            background: rgba(76, 175, 80, 0.4);
+            border-color: rgba(76, 175, 80, 0.5);
+        }
+        .pedal-btn.gas:active, .pedal-btn.gas.active {
+            background: rgba(76, 175, 80, 0.7);
+        }
+        .pedal-btn.brake {
+            background: rgba(244, 67, 54, 0.4);
+            border-color: rgba(244, 67, 54, 0.5);
+        }
+        .pedal-btn.brake:active, .pedal-btn.brake.active {
+            background: rgba(244, 67, 54, 0.7);
+        }
+        
+        /* Gear buttons - small circles */
+        .gear-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 14px;
+        }
+        .gear-btn.up {
+            background: rgba(33, 150, 243, 0.4);
+            border-color: rgba(33, 150, 243, 0.5);
+        }
+        .gear-btn.up:active { background: rgba(33, 150, 243, 0.7); }
+        .gear-btn.down {
+            background: rgba(255, 152, 0, 0.4);
+            border-color: rgba(255, 152, 0, 0.5);
+        }
+        .gear-btn.down:active { background: rgba(255, 152, 0, 0.7); }
+        
+        /* Gear display - compact */
+        .gear-display {
+            background: rgba(0, 0, 0, 0.5);
+            color: #4fc3f7;
+            font-size: 13px;
+            font-weight: bold;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            min-width: 28px;
+            text-align: center;
+        }
+        
+        /* Action buttons - tiny circles */
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.35);
+        }
+        .action-btn.handbrake {
+            background: rgba(156, 39, 176, 0.4);
+            border-color: rgba(156, 39, 176, 0.5);
+        }
+        .action-btn.handbrake:active { background: rgba(156, 39, 176, 0.7); }
+        
+        /* Extra small screens (< 400px) */
+        @media (max-width: 400px) {
+            .steer-btn { width: 48px; height: 44px; font-size: 18px; }
+            .pedal-btn { width: 52px; height: 48px; font-size: 10px; }
+            .gear-btn { width: 32px; height: 32px; font-size: 12px; }
+            .gear-display { font-size: 11px; padding: 4px 8px; }
+            .action-btn { width: 28px; height: 28px; font-size: 10px; }
+            .steer-zone { left: 6px; bottom: 10px; gap: 6px; }
+            .pedal-zone { right: 6px; bottom: 10px; gap: 6px; }
+            .gear-zone { bottom: 10px; gap: 4px; }
+            .action-zone { top: 50px; right: 6px; gap: 4px; }
+        }
+        
+        /* Landscape mode */
+        @media (max-height: 450px) and (orientation: landscape) {
+            .steer-zone { left: 15px; bottom: 8px; }
+            .pedal-zone { right: 15px; bottom: 8px; }
+            .steer-btn { width: 52px; height: 46px; }
+            .pedal-btn { width: 56px; height: 52px; }
+            .gear-zone { bottom: 8px; }
+            .action-zone { top: 45px; }
+        }
+        
+        /* Very small height (keyboard open, etc) - hide non-essential */
+        @media (max-height: 350px) {
+            .action-zone { display: none; }
+            .gear-display { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -293,14 +468,14 @@
             <canvas id="canvas"></canvas>
             <div id="hud">
                 <div class="hud-section">
-                    <div><strong>🚗 CarX Simulator v2.2</strong></div>
+                    <div><strong>🚗 CarX Simulator v2.3</strong></div>
                     <div style="font-size: 10px; color: #888; margin-top: 2px;">Professional Physics</div>
                 </div>
                 
                 <div class="hud-section">
-                    <div>Speed: <span id="speed" class="hud-value">0</span> m/s</div>
-                    <div>RPM: <span id="rpm" class="hud-value">1000</span></div>
-                    <div>Gear: <span id="gear" class="hud-value">1</span></div>
+                    <div>Speed: <span id="speed" class="hud-value">0</span> m/s (<span id="speed-kmh-hud" style="color: #888;">0</span> km/h)</div>
+                    <div>RPM: <span id="rpm" class="hud-value">1000</span> <span id="rpm-bar" style="display: inline-block; width: 60px; height: 8px; background: #333; border-radius: 4px; vertical-align: middle; margin-left: 5px;"><span id="rpm-fill" style="display: block; height: 100%; width: 15%; background: linear-gradient(90deg, #4ec9b0, #ffa500); border-radius: 4px; transition: width 0.1s;"></span></span></div>
+                    <div>Gear: <span id="gear" class="hud-value">1</span> <span id="shift-indicator" style="color: #ffa500; font-size: 10px;"></span></div>
                 </div>
                 
                 <div class="hud-section">
@@ -325,40 +500,41 @@
                 </div>
             </div>
             <div class="instructions" id="instructions">
-                <div><kbd>↑</kbd> or <kbd>W</kbd> Throttle | <kbd>↓</kbd> or <kbd>S</kbd> Brake</div>
+                <div><kbd>↑</kbd> Throttle | <kbd>↓</kbd> Brake | <kbd>W</kbd> Shift Up | <kbd>S</kbd> Shift Down</div>
                 <div><kbd>←</kbd><kbd>→</kbd> or <kbd>A</kbd><kbd>D</kbd> Steer | <kbd>Space</kbd> Handbrake</div>
-                <div><kbd>Drag</kbd> Rotate | <kbd>Wheel</kbd> Zoom | <kbd>C</kbd> Follow | <kbd>R</kbd> Reset | <kbd>G</kbd> Debug</div>
-                <div style="margin-top: 5px; font-size: 10px; opacity: 0.7;">🎮 Professional Physics v2.2 - Pacejka Tires, Load Transfer, Downforce</div>
+                <div><kbd>Drag</kbd> Rotate | <kbd>Wheel</kbd> Zoom | <kbd>C</kbd> Follow | <kbd>R</kbd> Reset</div>
+                <div id="transmission-info" style="margin-top: 5px; font-size: 10px; opacity: 0.7;">🎮 7-Speed Manual: Gears 1-7 + R1/R2 + N | 295 HP Sports Car</div>
             </div>
 
             <div id="mobile-controls" class="mobile-control-panel" aria-label="Touch driving controls">
-                <div class="mobile-cluster" aria-label="Steering cluster">
-                    <div class="cluster-title">Steering</div>
-                    <div class="mobile-row">
-                        <button id="btn-steer-left" class="mobile-button pill wide" aria-label="Steer left">← Steer</button>
-                        <button id="btn-steer-right" class="mobile-button pill wide" aria-label="Steer right">→ Steer</button>
-                    </div>
-                    <div class="mobile-row stack" style="margin-top: 8px;">
-                        <div class="mobile-row">
-                            <button id="btn-handbrake" class="mobile-button ghost wide" aria-label="Handbrake">⛔ Handbrake</button>
-                            <button id="btn-debug" class="mobile-button ghost half" aria-label="Toggle debug">G Debug</button>
-                        </div>
-                    </div>
+                <!-- Left: Steering arrows -->
+                <div class="steer-zone">
+                    <button id="btn-steer-left" class="touch-btn steer-btn" aria-label="Steer left">◀</button>
+                    <button id="btn-steer-right" class="touch-btn steer-btn" aria-label="Steer right">▶</button>
                 </div>
-                <div class="mobile-cluster" aria-label="Drive cluster">
-                    <div class="cluster-title">Drive</div>
-                    <div class="mobile-row stack">
-                        <button id="btn-throttle" class="mobile-button accent" aria-label="Throttle">↑ Throttle</button>
-                        <button id="btn-brake" class="mobile-button secondary" aria-label="Brake">↓ Brake</button>
-                    </div>
-                    <div class="mobile-row spread" style="margin-top: 8px;">
-                        <button id="btn-follow" class="mobile-button pill wide" aria-label="Toggle follow camera">🎯 Follow</button>
-                        <button id="btn-reset" class="mobile-button pill wide" aria-label="Reset car">🔄 Reset</button>
-                    </div>
+                
+                <!-- Center: Gear (horizontal: down - display - up) -->
+                <div class="gear-zone">
+                    <button id="btn-shift-down" class="touch-btn gear-btn down" aria-label="Shift down">−</button>
+                    <div class="gear-display" id="mobile-gear">N</div>
+                    <button id="btn-shift-up" class="touch-btn gear-btn up" aria-label="Shift up">+</button>
+                </div>
+                
+                <!-- Right: Gas on top, Brake below -->
+                <div class="pedal-zone">
+                    <button id="btn-throttle" class="touch-btn pedal-btn gas" aria-label="Gas">GAS</button>
+                    <button id="btn-brake" class="touch-btn pedal-btn brake" aria-label="Brake">BRK</button>
+                </div>
+                
+                <!-- Top right: Quick actions -->
+                <div class="action-zone">
+                    <button id="btn-handbrake" class="touch-btn action-btn handbrake" aria-label="Handbrake">P</button>
+                    <button id="btn-reset" class="touch-btn action-btn" aria-label="Reset">↺</button>
+                    <button id="btn-follow" class="touch-btn action-btn" aria-label="Camera">📷</button>
                 </div>
             </div>
 
-            <div id="notifications" style="position: absolute; bottom: 80px; left: 20px; max-width: 300px;"></div>
+            <div id="notifications" style="position: absolute; bottom: 120px; left: 10px; max-width: 250px; font-size: 11px;"></div>
         </div>
         <div id="controls">
             <h1>🏎️ CarX Simulator</h1>
@@ -370,6 +546,7 @@
                     <div class="stat">
                         <div class="stat-label">Speed</div>
                         <div class="stat-value"><span id="speed2">0</span> <span class="stat-unit">m/s</span></div>
+                        <div style="font-size: 11px; color: #888;"><span id="speed-kph">0</span> km/h</div>
                     </div>
                     <div class="stat">
                         <div class="stat-label">RPM</div>
@@ -380,8 +557,18 @@
                         <div class="stat-value"><span id="gear2">1</span></div>
                     </div>
                     <div class="stat">
+                        <div class="stat-label">Torque</div>
+                        <div class="stat-value"><span id="torque-output">0</span><span class="stat-unit">%</span></div>
+                    </div>
+                </div>
+                <div class="stat-grid" style="margin-top: 12px;">
+                    <div class="stat">
                         <div class="stat-label">G-Force</div>
                         <div class="stat-value"><span id="gforce">0.0</span> <span class="stat-unit">g</span></div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Power Band</div>
+                        <div class="stat-value"><span id="power-band" style="font-size: 14px;">Idle</span></div>
                     </div>
                 </div>
             </div>
@@ -440,6 +627,18 @@
             
             <div class="section">
                 <h2>⚙️ Vehicle Setup</h2>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 12px; font-weight: 600;">🚗 Car Model</label>
+                    <select id="car-model" onchange="changeCarModel()" style="width: 100%; padding: 8px; margin-top: 5px; border-radius: 5px; border: 1px solid #ddd;">
+                        <option value="sports_car" selected>Sports Car (Default)</option>
+                        <option value="bmw_e30">BMW E30 (1985)</option>
+                        <option value="chevy_c10">Chevrolet C10 Pickup (1963)</option>
+                    </select>
+                    <div style="font-size: 10px; color: #888; margin-top: 3px;">
+                        ⏳ Loading new model may take a moment
+                    </div>
+                </div>
                 
                 <div style="margin-bottom: 15px;">
                     <label style="font-size: 12px; font-weight: 600;">Tire Type</label>
@@ -591,7 +790,7 @@ car.getSpeed();</textarea>
                     <button onclick="executeCode()" style="flex: 1;">▶️ Execute Code</button>
                     <button onclick="stopExecution()" style="width: auto; padding: 8px 15px; background: #e74c3c;">⏹️ Stop</button>
                 </div>
-                <div id="output" style="background: #1e1e1e; color: #4ec9b0; padding: 12px; border-radius: 5px; margin-top: 10px; font-family: monospace; font-size: 12px; min-height: 80px; max-height: 150px; overflow-y: auto; border: 1px solid #333;">Ready to execute code...</div>
+                <div id="output" style="background: #1f1f1f; color: #4ec9b0; padding: 12px; border-radius: 5px; margin-top: 10px; font-family: monospace; font-size: 12px; min-height: 80px; max-height: 150px; overflow-y: auto; border: 1px solid #333;">Ready to execute code...</div>
                 <div style="margin-top: 8px; font-size: 11px; color: #888;">
                     <strong>🚀 Enhanced Programming Support:</strong><br>
                     <strong>JavaScript:</strong> Full ES6+, console.log(), arrays, objects, async/await<br>
@@ -819,23 +1018,45 @@ car.getSpeed();</textarea>
         class Car {
             constructor() {
                 // Start at terrain height + offset
-                const initialHeight = 10; // Start higher to ensure airborne detection
+                // Initial height will be adjusted after terrain is created
+                const initialHeight = 5; // Start slightly above ground for gentle drop
                 this.position = new Vec3(0, initialHeight, 0);
                 this.velocity = new Vec3(0, 0, 0); // Start stationary
                 this.verticalVelocity = 0; // Separate vertical velocity
                 this.rotation = 0;
-                this.mass = 1200;
-                this.enginePower = 150000;
+                // Default specs match Sports Car configuration
+                this.mass = 1350;           // kg - lightweight sports car
+                this.enginePower = 260000;  // Watts (more power so higher gears keep pulling)
                 this.throttle = 0;
                 this.steering = 0;
                 this.brake = 0;
-                this.engineRPM = 1000;
-                this.gear = 1;
+                this.engineRPM = 800;
+                this.gear = 0; // Start in Neutral. 1-7 forward, 0=neutral, -1/-2 reverse
+                this.maxForwardGear = 7;
+                this.maxReverseGear = -2;
+                this.clutchEngaged = true;
+                
+                // Gear ratios: R2, R1, N, 1, 2, 3, 4, 5, 6, 7
+                // Sports car 7-speed transmission
+                this.gearRatios = {
+                    '-2': -3.8,  // Reverse 2 (slower, more torque)
+                    '-1': -3.0,  // Reverse 1
+                    '0': 0,      // Neutral
+                    '1': 3.82,   // 1st gear - short for quick launches
+                    '2': 2.36,   // 2nd gear - good acceleration
+                    '3': 1.68,   // 3rd gear - mid-range power
+                    '4': 1.31,   // 4th gear - balanced
+                    '5': 1.08,   // 5th gear - highway cruising
+                    '6': 0.88,   // 6th gear - overdrive
+                    '7': 0.72    // 7th gear - top speed overdrive
+                };
+                this.finalDrive = 3.23;     // Shorter final drive for acceleration
+                
                 this.gravity = -9.81; // Default Earth gravity
                 this.onGround = false;
                 this.airborneTime = 0; // Track time in air
-                this.groundClearance = 0.5; // Distance from wheel contact to car center of mass
-                this.wheelRadius = 0.35; // Wheel size (matches C++ code)
+                this.groundClearance = 0.12; // Distance from wheel contact to car center of mass (sports car - low)
+                this.wheelRadius = 0.33; // Wheel size - 18" performance tires
                 
                 // Advanced physics properties
                 this.tireType = 'sport';
@@ -845,13 +1066,37 @@ car.getSpeed();</textarea>
                 this.tractionControl = true;
                 this.abs = true;
                 
-                // Tire simulation
+                // Suspension physics (spring-damper model)
+                this.suspensionRestLength = 0.3; // meters
+                this.suspensionCompression = [0, 0, 0, 0]; // Per-wheel compression
+                this.suspensionVelocity = [0, 0, 0, 0]; // Per-wheel velocity
+                
+                // Suspension parameters based on stiffness setting
+                this.suspensionParams = {
+                    soft: { spring: 35000, damping: 2500 },
+                    medium: { spring: 50000, damping: 3500 },
+                    stiff: { spring: 70000, damping: 4500 }
+                };
+                
+                // Tire simulation with slip
                 this.tires = [
-                    { temp: 25, wear: 0, load: 0, grip: 1.0 }, // FL
-                    { temp: 25, wear: 0, load: 0, grip: 1.0 }, // FR
-                    { temp: 25, wear: 0, load: 0, grip: 1.0 }, // RL
-                    { temp: 25, wear: 0, load: 0, grip: 1.0 }  // RR
+                    { temp: 25, wear: 0, load: 0, grip: 1.0, slipRatio: 0, slipAngle: 0 }, // FL
+                    { temp: 25, wear: 0, load: 0, grip: 1.0, slipRatio: 0, slipAngle: 0 }, // FR
+                    { temp: 25, wear: 0, load: 0, grip: 1.0, slipRatio: 0, slipAngle: 0 }, // RL
+                    { temp: 25, wear: 0, load: 0, grip: 1.0, slipRatio: 0, slipAngle: 0 }  // RR
                 ];
+                
+                // Pacejka tire model coefficients (simplified Magic Formula)
+                this.tireParams = {
+                    street: { B: 8, C: 1.6, D: 1.0, E: 0.9 },
+                    sport: { B: 10, C: 1.9, D: 1.1, E: 0.95 },
+                    racing: { B: 12, C: 2.0, D: 1.2, E: 0.97 },
+                    offroad: { B: 6, C: 1.4, D: 0.9, E: 0.85 }
+                };
+                
+                // Yaw rate for oversteer/understeer
+                this.yawRate = 0;
+                this.lateralVelocity = 0;
                 
                 // Aerodynamics
                 this.downforce = 0;
@@ -861,16 +1106,122 @@ car.getSpeed();</textarea>
                 // Load transfer
                 this.loadTransfer = 'balanced';
             }
+            
+            // Pacejka Magic Formula for tire grip
+            calculateTireGrip(slip, tireParams) {
+                const { B, C, D, E } = tireParams;
+                // Magic Formula: D * sin(C * atan(B*x - E*(B*x - atan(B*x))))
+                const Bx = B * slip;
+                return D * Math.sin(C * Math.atan(Bx - E * (Bx - Math.atan(Bx))));
+            }
+            
+            // Shift up (W key) - goes from R2 -> R1 -> N -> 1 -> 2 -> ... -> 7
+            shiftUp() {
+                if (this.gear < this.maxForwardGear) {
+                    this.gear++;
+                    return true;
+                }
+                return false;
+            }
+            
+            // Shift down (S key) - goes from 7 -> 6 -> ... -> 1 -> N -> R1 -> R2
+            shiftDown() {
+                if (this.gear > this.maxReverseGear) {
+                    this.gear--;
+                    return true;
+                }
+                return false;
+            }
+            
+            // Get gear display name
+            getGearName() {
+                if (this.gear === 0) return 'N';
+                if (this.gear === -1) return 'R1';
+                if (this.gear === -2) return 'R2';
+                return this.gear.toString();
+            }
+            
+            // Get gear display with max gear info (e.g., "3/5" or "N" or "R1")
+            getGearDisplayFull() {
+                if (this.gear === 0) return 'N';
+                if (this.gear === -1) return 'R1';
+                if (this.gear === -2) return 'R2';
+                return `${this.gear}/${this.maxForwardGear}`;
+            }
+            
+            // Get current gear ratio
+            getCurrentGearRatio() {
+                return this.gearRatios[this.gear.toString()] || 0;
+            }
+            
+            // Get torque multiplier based on RPM (torque curve simulation)
+            // Simulates realistic engine torque characteristics
+            getTorqueMultiplier() {
+                const rpm = this.engineRPM;
+                const idleRPM = 800;
+                const peakTorqueRPM = 4500;  // Peak torque RPM
+                const peakPowerRPM = 6500;   // Peak power RPM
+                const redlineRPM = 7200;
+                
+                // Realistic torque curve using smooth interpolation
+                if (rpm < idleRPM) return 0.3;  // Below idle - very low torque
+                if (rpm < 1500) return 0.5 + (rpm - idleRPM) / 700 * 0.3;  // 0.5 to 0.8 (building)
+                if (rpm < 3000) return 0.8 + (rpm - 1500) / 1500 * 0.15;   // 0.8 to 0.95 (climbing)
+                if (rpm < peakTorqueRPM) return 0.95 + (rpm - 3000) / 1500 * 0.05; // 0.95 to 1.0 (peak)
+                if (rpm < peakPowerRPM) return 1.0;  // Peak torque plateau
+                if (rpm < redlineRPM) return 1.0 - (rpm - peakPowerRPM) / 700 * 0.2; // 1.0 to 0.8 (falling)
+                // Rev limiter - severe power cut above redline
+                return 0.2 * (1 + Math.sin(rpm * 0.1)); // Oscillating low power (bouncing off limiter)
+            }
+            
+            // Get power multiplier (torque * RPM relationship)
+            getPowerMultiplier() {
+                const torque = this.getTorqueMultiplier();
+                const rpmFactor = Math.min(1, this.engineRPM / 6000); // Power increases with RPM
+                return torque * (0.5 + 0.5 * rpmFactor);
+            }
+            
+            // Calculate theoretical top speed for current gear
+            getTheoreticalTopSpeed() {
+                const gearRatio = Math.abs(this.getCurrentGearRatio());
+                if (gearRatio === 0) return 0;
+                // Top speed when engine hits redline (7200 RPM)
+                const redlineRPM = 7200;
+                const wheelCircumference = 2 * Math.PI * this.wheelRadius;
+                const wheelRPM = redlineRPM / (gearRatio * this.finalDrive);
+                const speedMPS = (wheelRPM * wheelCircumference) / 60;
+                return speedMPS;
+            }
+            
+            // Calculate optimal shift RPM for maximum acceleration
+            getOptimalShiftRPM() {
+                // Shift just before power drops off significantly
+                return 6800;
+            }
+            
+            // Check if engine is at rev limiter
+            isAtRevLimiter() {
+                return this.engineRPM >= 7200;
+            }
+            
+            // Get current gear's speed range (min to max in m/s)
+            getGearSpeedRange() {
+                const gearRatio = Math.abs(this.getCurrentGearRatio());
+                if (gearRatio === 0) return { min: 0, max: 0 };
+                
+                const wheelCirc = 2 * Math.PI * this.wheelRadius;
+                const minRPM = 1200; // Minimum comfortable RPM
+                const maxRPM = 7200; // Redline
+                
+                const minSpeed = (minRPM / (gearRatio * this.finalDrive)) * wheelCirc / 60;
+                const maxSpeed = (maxRPM / (gearRatio * this.finalDrive)) * wheelCirc / 60;
+                
+                return { min: minSpeed, max: maxSpeed };
+            }
 
             update(dt, terrain) {
-                // Debug: Log update calls occasionally
-                if (Math.random() < 0.01) {
-                    console.log('🔄 Update called:', 
-                              'pos:', this.position.y.toFixed(2), 
-                              'vVel:', this.verticalVelocity.toFixed(2),
-                              'onGround:', this.onGround,
-                              'throttle:', this.throttle.toFixed(2));
-                }
+                // Debug logging disabled for cleaner output
+                // Uncomment to debug physics updates
                 
                 // Horizontal physics first
                 const forward = new Vec3(-Math.sin(this.rotation), 0, -Math.cos(this.rotation));
@@ -885,17 +1236,18 @@ car.getSpeed();</textarea>
                 
                 // Update tire temperatures based on speed and slip
                 this.tires.forEach((tire, i) => {
-                    // Heat generation from driving
-                    const heatGen = speed * 0.05 + Math.abs(this.throttle) * 0.5 + Math.abs(this.steering) * 0.3;
+                    // Heat generation from driving (reduced rates for more realistic simulation)
+                    const heatGen = speed * 0.02 + Math.abs(this.throttle) * 0.3 + Math.abs(this.steering) * 0.2;
                     tire.temp += heatGen * dt;
                     
-                    // Cooling
-                    const cooling = (tire.temp - 25) * 0.1 * dt;
+                    // Cooling (increased cooling rate for balance)
+                    const ambientTemp = 25;
+                    const cooling = (tire.temp - ambientTemp) * 0.15 * dt;
                     tire.temp -= cooling;
-                    tire.temp = Math.max(25, Math.min(120, tire.temp));
+                    tire.temp = Math.max(ambientTemp, Math.min(120, tire.temp));
                     
-                    // Wear increases with aggressive driving
-                    const wearRate = (Math.abs(this.throttle) + Math.abs(this.steering) + this.brake) * 0.001 * dt;
+                    // Wear increases with aggressive driving (reduced rate)
+                    const wearRate = (Math.abs(this.throttle) + Math.abs(this.steering) + this.brake) * 0.0005 * dt;
                     tire.wear += wearRate;
                     tire.wear = Math.min(1, tire.wear);
                     
@@ -948,44 +1300,188 @@ car.getSpeed();</textarea>
                     this.tires.forEach(tire => tire.load = baseLoad + downforcePerWheel);
                 }
                 
-                // Calculate effective grip with tire model
-                const avgGrip = this.tires.reduce((sum, t) => sum + t.grip, 0) / 4;
-                const gripMultiplier = avgGrip * (1 - this.tires[0].wear * 0.3);
+                // Calculate slip ratio for each tire (simplified for stability)
+                const groundSpeed = Math.max(1, speed); // Prevent division by zero
                 
-                // Apply forces with grip
-                let engineForce = forward.mul(this.throttle * this.enginePower / this.mass * gripMultiplier);
+                // Calculate slip ratio based on throttle/brake input
+                this.tires.forEach((tire, i) => {
+                    // Simplified slip ratio for telemetry display
+                    const wheelSpeedDelta = this.throttle * 2 - this.brake * 3;
+                    tire.slipRatio = wheelSpeedDelta / groundSpeed;
+                    tire.slipRatio = Math.max(-0.5, Math.min(0.5, tire.slipRatio)); // Clamp to reasonable range
+                });
                 
-                // Traction control
-                if (this.tractionControl && speed > 5 && this.throttle > 0.7) {
-                    engineForce = engineForce.mul(0.85);
+                // Calculate effective grip (simplified and stable)
+                const avgTempGrip = this.tires.reduce((sum, t) => sum + t.grip, 0) / 4;
+                const wearFactor = 1 - this.tires[0].wear * 0.3;
+                
+                // Base grip from temperature and wear
+                let gripMultiplier = avgTempGrip * wearFactor;
+                
+                // Reduce grip slightly when wheels are spinning (traction loss)
+                const avgSlipRatio = this.tires.reduce((sum, t) => sum + Math.abs(t.slipRatio), 0) / 4;
+                if (avgSlipRatio > 0.2) {
+                    gripMultiplier *= (1 - (avgSlipRatio - 0.2) * 0.5);
                 }
                 
-                const drag = this.velocity.mul(-0.3 * this.velocity.length());
-                let brakeForce = this.velocity.normalized().mul(-this.brake * 25 * gripMultiplier);
+                // Ensure grip is always positive and reasonable
+                gripMultiplier = Math.max(0.3, Math.min(1.2, gripMultiplier));
                 
-                // ABS
-                if (this.abs && this.brake > 0.8 && speed > 10) {
-                    brakeForce = brakeForce.mul(0.9);
+                // Check ground contact FIRST before applying forces
+                // Pre-calculate terrain height for ground check (simple center-point check)
+                const preCheckHeight = terrain.getHeight(this.position.x, this.position.z);
+                const preCheckGroundY = preCheckHeight + this.wheelRadius + this.groundClearance;
+                // Use generous tolerance for force application - detailed check happens later
+                const isOnGround = this.position.y <= preCheckGroundY + 0.5;
+                
+                // Apply forces with grip - ONLY when on ground
+                let engineForce = new Vec3(0, 0, 0);
+                let brakeForce = new Vec3(0, 0, 0);
+                
+                if (isOnGround) {
+                    // Engine force based on current gear
+                    const gearRatio = this.getCurrentGearRatio();
+                    
+                    if (gearRatio !== 0 && this.throttle > 0) {
+                        // Calculate engine force using realistic drivetrain model
+                        // Torque at wheels = Engine Torque × Gear Ratio × Final Drive × Efficiency
+                        const absGearRatio = Math.abs(gearRatio);
+                        const direction = gearRatio > 0 ? 1 : -1; // Forward or reverse
+                        
+                        // Get RPM-based torque multiplier (simulates engine torque curve)
+                        const torqueMultiplier = this.getTorqueMultiplier();
+                        
+                        // Calculate effective wheel torque
+                        // Engine power (W) = Torque (Nm) × Angular velocity (rad/s)
+                        // At peak torque RPM, we want full power delivery
+                        const drivetrainEfficiency = 0.85; // 85% efficiency through gearbox
+                        const baseTorque = this.enginePower / (2 * Math.PI * 5500 / 60); // Base torque at 5500 RPM
+                        
+                        // Wheel torque = engine torque × gear ratio × final drive
+                        const wheelTorque = baseTorque * torqueMultiplier * absGearRatio * this.finalDrive * drivetrainEfficiency;
+                        
+                        // Force at wheels = Torque / wheel radius
+                        const wheelForce = wheelTorque / this.wheelRadius;
+                        
+                        // Apply throttle input and grip
+                        const effectiveForce = wheelForce * this.throttle * gripMultiplier;
+                        
+                        // Convert to acceleration (F = ma, so a = F/m)
+                        // Scale factor for game feel (physics timestep adjustment)
+                        const gameScale = 0.015;
+                        engineForce = forward.mul(direction * effectiveForce * gameScale);
+                        
+                        // Rev limiter - bouncing effect at redline
+                        if (this.isAtRevLimiter()) {
+                            // Oscillating power cut simulates bouncing off rev limiter
+                            const limiterCut = 0.2 + 0.1 * Math.sin(Date.now() * 0.05);
+                            engineForce = engineForce.mul(limiterCut);
+                        }
+                    }
+                    
+                    // Traction control (only for forward motion)
+                    if (this.tractionControl && speed > 5 && this.throttle > 0.7 && this.gear > 0) {
+                        // TC reduces power when wheels would spin
+                        const tcReduction = 0.85 - (this.throttle - 0.7) * 0.3;
+                        engineForce = engineForce.mul(Math.max(0.6, tcReduction));
+                    }
+                    
+                    // Brake force only when on ground
+                    // Brake force proportional to speed for realistic deceleration
+                    const brakeEfficiency = Math.min(1, speed / 5); // Full braking above 5 m/s
+                    brakeForce = this.velocity.normalized().mul(-this.brake * 30 * gripMultiplier * brakeEfficiency);
+                    
+                    // ABS - prevents wheel lockup at high brake pressure
+                    if (this.abs && this.brake > 0.8 && speed > 10) {
+                        // ABS pulses brakes to prevent lockup
+                        const absPulse = 0.85 + 0.1 * Math.sin(Date.now() * 0.03);
+                        brakeForce = brakeForce.mul(absPulse);
+                    }
                 }
+                
+                // Drag always applies (air resistance) - slightly reduced so higher gears
+                // can continue to build speed instead of stalling
+                const drag = this.velocity.mul(-0.22 * this.velocity.length());
                 
                 const totalForce = engineForce.add(drag).add(brakeForce);
                 
                 // Update velocity
                 this.velocity = this.velocity.add(totalForce.mul(dt));
-                if (speed > 60) this.velocity = this.velocity.normalized().mul(60);
+                
+                // Dynamic speed limit based on current gear's theoretical top speed
+                // Each gear has a maximum speed determined by redline RPM
+                const currentGearRatioAbs = Math.abs(this.getCurrentGearRatio());
+                const wheelCircumference = 2 * Math.PI * this.wheelRadius;
+                const redlineRPM = 7200;
+                
+                let maxSpeedInGear;
+                if (this.gear === 0 || currentGearRatioAbs === 0) {
+                    // Neutral - no power, coast with drag
+                    maxSpeedInGear = 100; // No artificial limit in neutral
+                } else if (this.gear < 0) {
+                    // Reverse gears - limited speed for safety
+                    maxSpeedInGear = 15; // ~54 km/h max in reverse
+                } else {
+                    // Forward gears - speed limited by redline in current gear
+                    const wheelRPMAtRedline = redlineRPM / (currentGearRatioAbs * this.finalDrive);
+                    maxSpeedInGear = (wheelRPMAtRedline * wheelCircumference) / 60;
+                    // Add 5% headroom for momentum/downhill
+                    maxSpeedInGear *= 1.05;
+                }
+                
+                // Also calculate absolute top speed (top gear at redline)
+                const topGearRatio = Math.abs(this.gearRatios[this.maxForwardGear.toString()] || 0.75);
+                const absoluteTopSpeed = topGearRatio > 0 
+                    ? (redlineRPM / (topGearRatio * this.finalDrive)) * wheelCircumference / 60 * 1.1
+                    : 80;
+                
+                // Use the lower of current gear limit or absolute top speed
+                const effectiveMaxSpeed = Math.min(maxSpeedInGear, absoluteTopSpeed, 90); // Hard cap at 90 m/s (~324 km/h)
+                
+                if (this.velocity.length() > effectiveMaxSpeed) {
+                    this.velocity = this.velocity.normalized().mul(effectiveMaxSpeed);
+                }
                 
                 // Update horizontal position
                 this.position.x += this.velocity.x * dt;
                 this.position.z += this.velocity.z * dt;
                 
-                // Steering
+                // Steering with speed-dependent response (stable version)
                 if (speed > 0.5 && Math.abs(this.steering) > 0.01) {
                     const forwardSpeed = this.velocity.dot(forward);
+                    
+                    // Calculate lateral velocity for telemetry
+                    this.lateralVelocity = this.velocity.dot(right);
+                    
                     if (Math.abs(forwardSpeed) > 0.5) {
-                        const turnRadius = 2.5 / Math.tan(this.steering * 0.6);
-                        const angularSpeed = forwardSpeed / turnRadius;
-                        this.rotation += angularSpeed * dt;
+                        // Speed-dependent steering reduction (natural understeer at high speed)
+                        const steeringReduction = 1 / (1 + speed * 0.02);
+                        const effectiveSteering = this.steering * steeringReduction;
+                        
+                        // Simple turn radius calculation
+                        const wheelBase = 2.6;
+                        const turnRadius = wheelBase / Math.tan(Math.abs(effectiveSteering * 0.5) + 0.01);
+                        
+                        // Calculate angular speed from steering
+                        const angularSpeed = forwardSpeed / turnRadius * Math.sign(this.steering);
+                        
+                        // Clamp angular speed to prevent spinning out
+                        const maxAngularSpeed = 2.0; // rad/s
+                        const clampedAngularSpeed = Math.max(-maxAngularSpeed, Math.min(maxAngularSpeed, angularSpeed));
+                        
+                        // Apply rotation
+                        this.rotation += clampedAngularSpeed * dt;
+                        
+                        // Store slip angles for telemetry (simplified)
+                        const slipAngle = Math.atan2(this.lateralVelocity, Math.abs(forwardSpeed) + 0.1);
+                        this.tires.forEach(tire => tire.slipAngle = slipAngle);
+                        
+                        // Update yaw rate for telemetry
+                        this.yawRate = clampedAngularSpeed;
                     }
+                } else {
+                    // Decay yaw rate when not steering
+                    this.yawRate *= 0.9;
                 }
                 
                 // Multi-point terrain collision (4 wheels)
@@ -1008,30 +1504,46 @@ car.getSpeed();</textarea>
                       z: this.position.z + wheelTrack/2 * sinR + wheelBase/2 * cosR }  // Rear-left
                 ];
                 
-                // Get terrain height at each wheel
-                const wheelHeights = wheels.map(w => terrain.getHeight(w.x, w.z));
+                // Get terrain height at each wheel position
+                // terrain.getHeight is deterministic and handles floating-origin internally
+                const fallbackHeight = this.position.y - this.wheelRadius - this.groundClearance;
+                const wheelHeights = wheels.map(w => {
+                    const h = terrain.getHeight(w.x, w.z);
+                    // Safety check - if height is invalid, use car's current ground estimate
+                    return Number.isFinite(h) ? h : fallbackHeight;
+                });
                 
-                // Average height of all wheels
-                const avgWheelHeight = wheelHeights.reduce((a, b) => a + b, 0) / wheelHeights.length;
-                
-                // Target car position: terrain height + wheel radius + ground clearance (center of mass height)
-                const targetGroundY = avgWheelHeight + this.wheelRadius + this.groundClearance;
-                
-                // Check if any wheel is significantly above ground (car is airborne)
-                const minWheelHeight = Math.min(...wheelHeights);
-                const lowestWheelY = this.position.y - this.wheelRadius - this.groundClearance;
-                const distanceToGround = lowestWheelY - minWheelHeight;
-                
-                // Debug ground detection
-                if (Math.random() < 0.02) {
-                    console.log('🔍 Ground check:', 
-                              'dist:', distanceToGround.toFixed(3),
-                              'carY:', this.position.y.toFixed(2),
-                              'minWheel:', minWheelHeight.toFixed(2),
-                              'target:', targetGroundY.toFixed(2));
+                // Safety check: ensure wheelHeights array is valid before spread operator
+                // This prevents "Math.min/max called with no arguments" errors
+                if (wheelHeights.length === 0 || wheelHeights.some(h => !Number.isFinite(h))) {
+                    console.warn('⚠️ Invalid wheel heights detected, using fallback');
+                    // Use current position as fallback
+                    this.onGround = true;
+                    return;
                 }
                 
-                if (distanceToGround > 0.2) {
+                // Calculate min/max/avg wheel heights (spread operator is safe now)
+                const minWheelHeight = Math.min(...wheelHeights);
+                const maxWheelHeight = Math.max(...wheelHeights);
+                const avgWheelHeight = wheelHeights.reduce((a, b) => a + b, 0) / wheelHeights.length;
+                
+                // Target car position: use max height for collision, avg for smooth following
+                // Blend between them based on height difference (steeper = use max more)
+                const heightVariance = maxWheelHeight - minWheelHeight;
+                const blendFactor = Math.min(1, heightVariance / 2); // 0-1 based on terrain steepness
+                const effectiveGroundHeight = avgWheelHeight * (1 - blendFactor) + maxWheelHeight * blendFactor;
+                
+                const targetGroundY = effectiveGroundHeight + this.wheelRadius + this.groundClearance;
+                
+                // Calculate distance from car bottom to ground
+                const carBottomY = this.position.y - this.wheelRadius - this.groundClearance;
+                const distanceToGround = carBottomY - maxWheelHeight;
+                
+                // Ground detection - simple threshold
+                const groundThreshold = 0.1; // 10cm tolerance for being "on ground"
+                const isAboveGround = distanceToGround > groundThreshold;
+                
+                if (isAboveGround) {
                     // Above ground - apply gravity (falling)
                     this.onGround = false;
                     this.airborneTime += dt;
@@ -1050,14 +1562,11 @@ car.getSpeed();</textarea>
                     const gravityAccel = this.gravity - airResistanceAccel;
                     this.verticalVelocity += gravityAccel * dt;
                     
-                    // Debug: Log first few frames of freefall
-                    if (this.airborneTime < 0.5 && Math.random() < 0.1) {
-                        console.log('🌍 Freefall:', 
-                                  'vVel:', this.verticalVelocity.toFixed(2), 
-                                  'gravity:', gravityAccel.toFixed(2),
-                                  'height:', this.position.y.toFixed(2),
-                                  'dist:', distanceToGround.toFixed(2));
-                    }
+                    // Debug freefall logging - uncomment to debug
+                    // if (this.airborneTime < 2.0 && Math.random() < 0.05) {
+                    //     console.log('🌍 Freefall:', 'vVel:', this.verticalVelocity.toFixed(2), 
+                    //               'carY:', this.position.y.toFixed(2), 'groundY:', maxWheelHeight.toFixed(2));
+                    // }
                     
                     // Terminal velocity (realistic for a car: ~50-60 m/s)
                     const terminalVelocity = -55; // Max fall speed (m/s)
@@ -1087,10 +1596,17 @@ car.getSpeed();</textarea>
                     // Update vertical position
                     this.position.y += this.verticalVelocity * dt;
                     
-                    // Check if any wheel touched ground
-                    if (this.position.y - this.wheelRadius - this.groundClearance <= minWheelHeight + 0.1) {
-                        // IMMEDIATE correction to prevent underground glitch
+                    // Check if car has reached or passed ground level
+                    const newCarBottomY = this.position.y - this.wheelRadius - this.groundClearance;
+                    const newDistToGround = newCarBottomY - maxWheelHeight;
+                    
+                    // Landing detected when car bottom is at or below ground level
+                    if (newDistToGround <= groundThreshold) {
+                        // Snap to correct ground position
                         this.position.y = targetGroundY;
+                        console.log('🛬 Landing! carY:', this.position.y.toFixed(2), 
+                                  'groundH:', maxWheelHeight.toFixed(2),
+                                  'impactVel:', this.verticalVelocity.toFixed(2));
                         
                         // Advanced landing physics based on impact velocity and angle
                         const impactSpeed = Math.abs(this.verticalVelocity);
@@ -1132,33 +1648,95 @@ car.getSpeed();</textarea>
                         }
                         this.airborneTime = 0;
                     }
-                } else if (distanceToGround < -0.5) {
+                } else if (distanceToGround < -0.1) {
                     // CRITICAL: Car is underground - FORCE it back up immediately
-                    this.position.y = targetGroundY + 0.5; // Add small offset to ensure it's above ground
+                    this.position.y = targetGroundY;
                     this.verticalVelocity = 0;
                     this.onGround = true;
                     this.airborneTime = 0;
-                    console.warn('⚠️ Underground glitch detected - forcing car up');
+                    // Reduce horizontal velocity when recovering from underground to prevent further clipping
+                    if (distanceToGround < -0.5) {
+                        this.velocity.x *= 0.8;
+                        this.velocity.z *= 0.8;
+                        // console.warn('⚠️ Underground glitch detected - forcing car up');
+                    }
                 } else {
-                    // On or near ground - follow terrain surface
+                    // On ground - follow terrain with simple spring physics
                     this.onGround = true;
+                    this.airborneTime = 0;
                     
-                    // Smooth transition to target height
+                    // Calculate height difference from target
                     const heightDiff = targetGroundY - this.position.y;
-                    if (Math.abs(heightDiff) > 0.01) {
-                        // Gradually adjust to terrain (prevents jitter)
-                        this.position.y += heightDiff * 0.3;
-                    } else {
+                    
+                    // Simple spring-damper for smooth terrain following
+                    const springK = 50; // Spring stiffness
+                    const damping = 0.8; // Damping factor
+                    
+                    // Apply spring force
+                    this.verticalVelocity += heightDiff * springK * dt;
+                    this.verticalVelocity *= damping;
+                    
+                    // Update position
+                    this.position.y += this.verticalVelocity * dt;
+                    
+                    // Prevent going underground
+                    if (this.position.y < targetGroundY - 0.05) {
                         this.position.y = targetGroundY;
+                        this.verticalVelocity = 0;
                     }
                     
-                    this.verticalVelocity = 0;
-                    this.airborneTime = 0;
+                    // Store suspension compression for telemetry
+                    for (let i = 0; i < 4; i++) {
+                        this.suspensionCompression[i] = Math.abs(heightDiff) * 100;
+                    }
                 }
                 
-                // Update engine stats
-                this.engineRPM = 1000 + speed * 200;
-                this.gear = Math.min(6, Math.floor(speed / 10) + 1);
+                // Update engine RPM based on manual gear selection with clutch simulation
+                const wheelRPM = speed / (2 * Math.PI * this.wheelRadius) * 60;
+                const currentGearRatio = Math.abs(this.getCurrentGearRatio());
+                
+                const idleRPM = 800;
+                const maxRPM = 7500;      // Absolute max RPM
+                const revLimiterRPM = 7200; // Rev limiter kicks in here
+                
+                if (this.gear === 0 || currentGearRatio === 0) {
+                    // Neutral - engine revs freely with throttle (no load)
+                    const targetRPM = idleRPM + this.throttle * 5000; // Can rev to 5800 in neutral
+                    // Smooth RPM change (engine inertia)
+                    const rpmChangeRate = this.throttle > 0 ? 8000 : 4000; // Faster rev up than down
+                    const rpmDiff = targetRPM - this.engineRPM;
+                    this.engineRPM += Math.sign(rpmDiff) * Math.min(Math.abs(rpmDiff), rpmChangeRate * dt);
+                } else {
+                    // In gear - RPM tied to wheel speed through drivetrain
+                    const calculatedRPM = wheelRPM * currentGearRatio * this.finalDrive;
+                    
+                    // Clutch slip simulation when starting from stop or changing gears
+                    if (speed < 3 && this.throttle > 0) {
+                        // Clutch slipping - RPM can be higher than wheel speed would suggest
+                        const clutchSlipRPM = idleRPM + this.throttle * 3500;
+                        // Blend between clutch slip and calculated RPM based on speed
+                        const clutchEngagement = Math.min(1, speed / 3);
+                        this.engineRPM = clutchSlipRPM * (1 - clutchEngagement) + calculatedRPM * clutchEngagement;
+                    } else {
+                        // Clutch fully engaged - direct connection
+                        this.engineRPM = calculatedRPM;
+                    }
+                    
+                    // Engine braking when off throttle (RPM drops slower)
+                    if (this.throttle === 0 && this.engineRPM > idleRPM + 500) {
+                        // Engine compression slows the car
+                        const engineBrakingForce = (this.engineRPM - idleRPM) * 0.0001 * currentGearRatio;
+                        this.velocity = this.velocity.mul(1 - engineBrakingForce * dt);
+                    }
+                    
+                    // Clamp RPM between idle and max
+                    this.engineRPM = Math.max(idleRPM, Math.min(maxRPM, this.engineRPM));
+                    
+                    // Stall prevention - if RPM drops too low in gear, bump it up
+                    if (this.engineRPM < idleRPM + 100 && speed < 2) {
+                        this.engineRPM = idleRPM + 100 + this.throttle * 500;
+                    }
+                }
             }
 
             getCentripetalForce() {
@@ -1176,154 +1754,286 @@ car.getSpeed();</textarea>
 
         class Terrain {
             constructor() {
-                this.type = 'hills'; // Start with hills for better demo
+                this.type = 'hills';
                 this.needsUpdate = true;
-                this.seed = 12345.6789; // Fixed seed for consistent terrain (changes with position)
-                this.chunkSize = 80; // Size of terrain chunks (matches visible mesh better)
-                this.origin = { x: 0, z: 0 }; // Where the current chunk is centered
-                this.lastCarPos = { x: 0, z: 0 };
-                this.updateCount = 0; // Track number of terrain updates
+                this.chunkSize = 220; // Larger chunks = fewer updates and smoother transitions
+                this.meshSize = 400;  // Visual mesh size (should be > chunkSize * 2)
+                this.origin = { x: 0, z: 0 };
+                this.updateCount = 0;
+                
+                // Floating-origin system to prevent precision loss at large distances
+                // worldOffset tracks cumulative rebases - added to world coords for noise sampling
+                this.worldOffset = { x: 0, z: 0 };
+                this.REBASE_THRESHOLD = 4000; // Rebase when car goes this far from origin
+                
+                // Smooth transition state for terrain regeneration (prevents choppy pops)
+                this.transitionFrames = 0;
+                this.transitionFramesTotal = 0;
+                
+                // Precomputed permutation table (512 entries for seamless wrapping)
+                this.perm = this.generatePermutation(256);
+                
+                // Height cache disabled - causes inconsistencies at chunk borders
+                // Direct computation is fast enough with modern JS engines
+                this.cacheEnabled = false;
+                this.heightCache = new Map();
             }
             
-            // Improved noise function for natural terrain - uses world position
+            generatePermutation(size) {
+                const p = new Array(size * 2);
+                const base = [];
+                for (let i = 0; i < size; i++) base[i] = i;
+                
+                // Deterministic shuffle with fixed seed for reproducibility
+                let seed = 42;
+                const seededRandom = () => {
+                    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+                    return seed / 0x7fffffff;
+                };
+                
+                for (let i = size - 1; i > 0; i--) {
+                    const j = Math.floor(seededRandom() * (i + 1));
+                    [base[i], base[j]] = [base[j], base[i]];
+                }
+                
+                for (let i = 0; i < size * 2; i++) {
+                    p[i] = base[i % size];
+                }
+                return p;
+            }
+            
+            fade(t) {
+                return t * t * t * (t * (t * 6 - 15) + 10);
+            }
+            
+            lerp(a, b, t) {
+                return a + t * (b - a);
+            }
+            
+            grad(hash, x, z) {
+                const h = hash & 7;
+                const u = h < 4 ? x : z;
+                const v = h < 4 ? z : x;
+                return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+            }
+            
+            // Improved Perlin noise - seamless and deterministic
+            // Uses double-precision math and proper modulo for infinite terrain
             noise(x, z) {
-                // Deterministic noise based on world position (not random seed)
-                // This ensures terrain is consistent at any position
-                const n = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
-                return n - Math.floor(n);
-            }
-            
-            // Smooth noise using interpolation
-            smoothNoise(x, z) {
-                const intX = Math.floor(x);
-                const intZ = Math.floor(z);
-                const fracX = x - intX;
-                const fracZ = z - intZ;
+                // Handle negative coordinates properly with floor-based wrapping
+                // This ensures seamless tiling without discontinuities
+                const floorX = Math.floor(x);
+                const floorZ = Math.floor(z);
                 
-                // Get noise at corners
-                const v1 = this.noise(intX, intZ);
-                const v2 = this.noise(intX + 1, intZ);
-                const v3 = this.noise(intX, intZ + 1);
-                const v4 = this.noise(intX + 1, intZ + 1);
+                // Fractional parts (always positive 0-1)
+                const xf = x - floorX;
+                const zf = z - floorZ;
                 
-                // Smooth interpolation (cosine)
-                const i1 = this.interpolate(v1, v2, fracX);
-                const i2 = this.interpolate(v3, v4, fracX);
-                return this.interpolate(i1, i2, fracZ);
+                // Integer grid coordinates with proper wrapping (handles negatives)
+                const X = ((floorX % 256) + 256) & 255;
+                const Z = ((floorZ % 256) + 256) & 255;
+                
+                const u = this.fade(xf);
+                const v = this.fade(zf);
+                
+                // Hash lookups with proper wrapping
+                const X1 = (X + 1) & 255;
+                const Z1 = (Z + 1) & 255;
+                
+                const aa = this.perm[this.perm[X] + Z];
+                const ab = this.perm[this.perm[X] + Z1];
+                const ba = this.perm[this.perm[X1] + Z];
+                const bb = this.perm[this.perm[X1] + Z1];
+                
+                const x1 = this.lerp(this.grad(aa, xf, zf), this.grad(ba, xf - 1, zf), u);
+                const x2 = this.lerp(this.grad(ab, xf, zf - 1), this.grad(bb, xf - 1, zf - 1), u);
+                
+                return (this.lerp(x1, x2, v) + 1) * 0.5;
             }
             
-            interpolate(a, b, t) {
-                const ft = t * Math.PI;
-                const f = (1 - Math.cos(ft)) * 0.5;
-                return a * (1 - f) + b * f;
-            }
-            
-            // Perlin-like noise with multiple octaves
-            perlinNoise(x, z, octaves, persistence, scale) {
+            // Fractal Brownian Motion - multiple octaves for natural terrain
+            fbm(x, z, octaves, persistence, scale) {
                 let total = 0;
-                let frequency = 1;
                 let amplitude = 1;
                 let maxValue = 0;
+                let freq = 1;
                 
                 for (let i = 0; i < octaves; i++) {
-                    total += this.smoothNoise(x * frequency / scale, z * frequency / scale) * amplitude;
+                    // Scale coordinates for each octave
+                    const sx = x * freq / scale;
+                    const sz = z * freq / scale;
+                    total += this.noise(sx, sz) * amplitude;
                     maxValue += amplitude;
                     amplitude *= persistence;
-                    frequency *= 2;
+                    freq *= 2;
                 }
                 
                 return total / maxValue;
             }
 
-            getHeight(x, z) {
+            /**
+             * Get terrain height at world coordinates.
+             * DETERMINISTIC: Same (worldX, worldZ) ALWAYS returns same height.
+             * SAFE: Never returns NaN or Infinity.
+             * 
+             * @param {number} worldX - World X coordinate (can be any double value)
+             * @param {number} worldZ - World Z coordinate (can be any double value)
+             * @returns {number} Height at that position (finite number, never NaN)
+             */
+            getHeight(worldX, worldZ) {
+                // Validate inputs - protect against NaN/Infinity
+                if (!Number.isFinite(worldX) || !Number.isFinite(worldZ)) {
+                    console.warn('⚠️ getHeight: Invalid coordinates', worldX, worldZ);
+                    return 0;
+                }
+                
+                // Apply floating-origin offset for noise sampling
+                // This keeps noise coordinates in a reasonable range for precision
+                const x = worldX + this.worldOffset.x;
+                const z = worldZ + this.worldOffset.z;
+                
+                let height = 0;
+                
                 switch(this.type) {
                     case 'flat':
-                        return 0;
+                        height = 0;
+                        break;
                     
-                    case 'hills': {
-                        // Gentle rolling hills with multiple frequencies
-                        const baseHeight = this.perlinNoise(x, z, 4, 0.5, 30) * 5;
-                        const detail = Math.sin(x / 15) * Math.cos(z / 15) * 2;
-                        const microDetail = this.perlinNoise(x, z, 2, 0.3, 10) * 1;
-                        return baseHeight + detail + microDetail;
-                    }
+                    case 'hills':
+                        // Gentle rolling hills - good for general driving
+                        height = this.fbm(x, z, 4, 0.5, 50) * 8 +
+                                 this.fbm(x, z, 2, 0.3, 20) * 2;
+                        break;
                     
-                    case 'mountains': {
-                        // Dramatic mountain peaks with valleys
-                        const baseNoise = this.perlinNoise(x, z, 6, 0.6, 40);
-                        const mountains = Math.pow(baseNoise, 2) * 20; // Squared for sharper peaks
-                        
-                        // Add ridges
-                        const ridgeX = Math.abs(Math.sin(x / 25)) * 8;
-                        const ridgeZ = Math.abs(Math.cos(z / 25)) * 8;
-                        const ridges = Math.min(ridgeX, ridgeZ);
-                        
-                        // Add valleys
-                        const valley = Math.sin(x / 30) * Math.cos(z / 30) * -5;
-                        
-                        // Combine with detail
-                        const detail = this.perlinNoise(x, z, 3, 0.4, 15) * 3;
-                        
-                        return mountains + ridges + valley + detail;
-                    }
+                    case 'mountains':
+                        // Dramatic peaks with power curve for sharper ridges
+                        const base = this.fbm(x, z, 5, 0.55, 60);
+                        height = Math.pow(base, 1.5) * 30 +
+                                 this.fbm(x, z, 3, 0.4, 25) * 5;
+                        break;
                     
                     case 'track': {
-                        // Circular race track with banking
-                        const centerX = 0;
-                        const centerZ = 0;
-                        const trackRadius = 40; // Outer radius
-                        const trackWidth = 15; // Width of track
-                        
-                        const dist = Math.sqrt((x - centerX) ** 2 + (z - centerZ) ** 2);
+                        // Circular race track with banked curves
+                        const dist = Math.sqrt(x * x + z * z);
+                        const trackRadius = 50;
+                        const trackWidth = 20;
                         const distFromTrack = Math.abs(dist - trackRadius);
                         
                         if (distFromTrack < trackWidth / 2) {
-                            // On the track - add banking for turns
-                            const angle = Math.atan2(z - centerZ, x - centerX);
-                            const banking = Math.sin(angle * 4) * 2; // Banking on curves
-                            
-                            // Smooth track surface with slight elevation changes
-                            const elevation = Math.sin(angle * 2) * 1.5;
-                            
-                            // Track surface (slightly lower than surroundings)
-                            const trackDepth = -1 + (distFromTrack / (trackWidth / 2)) * 1;
-                            
-                            return trackDepth + banking + elevation;
-                        } else if (distFromTrack < trackWidth / 2 + 5) {
-                            // Track edge/shoulder - smooth transition
-                            const edgeFactor = (distFromTrack - trackWidth / 2) / 5;
-                            const trackHeight = -1;
-                            const surroundHeight = this.perlinNoise(x, z, 3, 0.4, 20) * 2;
-                            return trackHeight * (1 - edgeFactor) + surroundHeight * edgeFactor;
+                            // On track - gentle banking
+                            const angle = Math.atan2(z, x);
+                            height = Math.sin(angle * 4) * 1.5 - 0.5;
                         } else {
-                            // Outside track - natural terrain
-                            return this.perlinNoise(x, z, 4, 0.5, 25) * 3;
+                            // Off track - natural terrain
+                            height = this.fbm(x, z, 3, 0.4, 30) * 3;
                         }
+                        break;
                     }
-                    
-                    default:
-                        return 0;
                 }
+                
+                // Final safety check - ensure we never return NaN/Infinity
+                if (!Number.isFinite(height)) {
+                    console.warn('⚠️ getHeight: Computed invalid height, returning 0');
+                    return 0;
+                }
+                
+                // Clamp height to reasonable range (-100 to 100)
+                height = Math.max(-100, Math.min(100, height));
+                
+                return height;
             }
             
-            // Check if terrain needs update based on car movement
+            /**
+             * Get terrain normal at world coordinates for slope calculations.
+             * Uses central differencing for smooth normals.
+             * 
+             * @param {number} worldX - World X coordinate
+             * @param {number} worldZ - World Z coordinate
+             * @returns {{x: number, y: number, z: number}} Normalized surface normal
+             */
+            getNormal(worldX, worldZ) {
+                const h = 0.5; // Sample distance
+                const hL = this.getHeight(worldX - h, worldZ);
+                const hR = this.getHeight(worldX + h, worldZ);
+                const hD = this.getHeight(worldX, worldZ - h);
+                const hU = this.getHeight(worldX, worldZ + h);
+                
+                // Cross product of tangent vectors
+                const nx = hL - hR;
+                const ny = 2 * h;
+                const nz = hD - hU;
+                
+                // Normalize
+                const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+                return {
+                    x: nx / len,
+                    y: ny / len,
+                    z: nz / len
+                };
+            }
+            
+            /**
+             * Check if terrain mesh needs repositioning and handle floating-origin rebase.
+             * Call this every frame with car position.
+             * 
+             * @param {number} carX - Car world X position
+             * @param {number} carZ - Car world Z position
+             * @returns {{rebase: boolean, needsUpdate: boolean, offsetX?: number, offsetZ?: number}}
+             */
             checkUpdate(carX, carZ) {
+                // Validate inputs
+                if (!Number.isFinite(carX) || !Number.isFinite(carZ)) {
+                    return { rebase: false, needsUpdate: false };
+                }
+                
+                // Check for floating-origin rebase to prevent precision loss
+                const distFromOrigin = Math.sqrt(carX * carX + carZ * carZ);
+                if (distFromOrigin > this.REBASE_THRESHOLD) {
+                    // Store offset for returning to caller (car position adjustment)
+                    const offsetX = carX;
+                    const offsetZ = carZ;
+                    
+                    // Accumulate world offset (for noise sampling continuity)
+                    this.worldOffset.x += carX;
+                    this.worldOffset.z += carZ;
+                    
+                    // Reset mesh origin
+                    this.origin.x = 0;
+                    this.origin.z = 0;
+                    this.needsUpdate = true;
+                    
+                    console.log('🌍 Floating-origin rebase at distance:', distFromOrigin.toFixed(0),
+                               '| New offset:', this.worldOffset.x.toFixed(0), this.worldOffset.z.toFixed(0));
+                    
+                    return { rebase: true, offsetX, offsetZ, needsUpdate: true };
+                }
+                
+                // Check if mesh needs repositioning (car moved far from mesh center)
                 const dx = carX - this.origin.x;
                 const dz = carZ - this.origin.z;
-                const distance = Math.sqrt(dx * dx + dz * dz);
-
-                // Recenter terrain when the car moves far from the current origin
-                if (distance > this.chunkSize * 0.35) { // Trigger updates before leaving the visible mesh
+                const distSq = dx * dx + dz * dz;
+                const threshold = this.chunkSize * 0.5;
+                
+                if (distSq > threshold * threshold) {
+                    // Snap origin to grid for consistent chunk alignment
                     this.origin.x = Math.round(carX / this.chunkSize) * this.chunkSize;
                     this.origin.z = Math.round(carZ / this.chunkSize) * this.chunkSize;
-                    this.lastCarPos.x = carX;
-                    this.lastCarPos.z = carZ;
                     this.needsUpdate = true;
                     this.updateCount++;
-                    console.log('🗺️ Terrain auto-generating #' + this.updateCount + ' - Car at:', carX.toFixed(1), carZ.toFixed(1), '| Distance traveled:', distance.toFixed(1));
-                    return true;
+                    // Start smooth transition for this chunk shift
+                    this.transitionFramesTotal = 20;
+                    this.transitionFrames = this.transitionFramesTotal;
+                    return { rebase: false, needsUpdate: true };
                 }
-                return false;
+                
+                return { rebase: false, needsUpdate: false };
+            }
+            
+            // Clear cache and mark for update when terrain type changes
+            setType(type) {
+                this.type = type;
+                this.heightCache.clear();
+                this.needsUpdate = true;
             }
         }
 
@@ -1434,18 +2144,21 @@ car.getSpeed();</textarea>
             return carGroup;
         }
 
-        // Three.js setup with advanced optimizations
+        // Three.js setup with optimizations
         const canvas = document.getElementById('canvas');
         const scene = new THREE.Scene();
         
-        // Sky and atmosphere - will be replaced by HDR environment
-        scene.background = new THREE.Color(0x7ab3ff); // Sky blue (fallback)
-        scene.fog = new THREE.Fog(0x8fb8ff, 80, 260);
+        // Stronger fog - reduces overdraw by hiding distant objects and adds depth
+        const fogColor = 0x7a9be6;
+        scene.background = new THREE.Color(fogColor);
+        // Start fog a bit closer and end much nearer to optimize rendering
+        scene.fog = new THREE.Fog(fogColor, 60, 180);
+        
+        // Camera with narrower FOV and shorter far plane for better performance
+        const camera = new THREE.PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.1, 300);
+        camera.position.set(0, 12, 25);
 
-        const camera = new THREE.PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-        camera.position.set(0, 12, 25); // Better default view
-
-        // Optimized renderer
+        // Renderer with balanced settings
         const renderer = new THREE.WebGLRenderer({
             canvas,
             antialias: true,
@@ -1454,7 +2167,7 @@ car.getSpeed();</textarea>
         
         renderer.setSize(canvas.clientWidth, canvas.clientHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setClearColor(0x0b112a, 1);
+        renderer.setClearColor(fogColor, 1);
 
         applyResponsiveLayout();
 
@@ -1464,7 +2177,7 @@ car.getSpeed();</textarea>
         
         // Tone mapping for HDR
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 0.5; // Default exposure
+        renderer.toneMappingExposure = 0.5;
         
         // Load HDR environment map with optimized resolution
         (() => {
@@ -1619,6 +2332,26 @@ car.getSpeed();</textarea>
                     // Optimize materials and enable shadows
                     carMesh.traverse((child) => {
                         if (child.isMesh) {
+                            // Hide any arrow/direction indicators (often green colored)
+                            // Check if this mesh looks like an arrow indicator
+                            const isArrowIndicator = child.name && (
+                                child.name.toLowerCase().includes('arrow') ||
+                                child.name.toLowerCase().includes('direction') ||
+                                child.name.toLowerCase().includes('indicator')
+                            );
+                            
+                            // Also hide green colored simple geometry (likely direction arrows)
+                            const isGreenArrow = child.material && child.material.color && 
+                                child.material.color.g > 0.7 && 
+                                child.material.color.r < 0.3 && 
+                                child.material.color.b < 0.3;
+                            
+                            if (isArrowIndicator || isGreenArrow) {
+                                child.visible = false;
+                                console.log('✓ Hidden arrow indicator:', child.name || 'unnamed');
+                                return;
+                            }
+                            
                             child.castShadow = true;
                             child.receiveShadow = true;
 
@@ -1810,8 +2543,21 @@ car.getSpeed();</textarea>
         }
         
         function clearVegetation() {
+            // Properly dispose of tree geometries and materials to prevent memory leaks
+            treesGroup.traverse((child) => {
+                if (child.isMesh) {
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material) {
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach(m => m.dispose());
+                        } else {
+                            child.material.dispose();
+                        }
+                    }
+                }
+            });
             treesGroup.clear();
-            console.log('✓ Vegetation cleared');
+            console.log('✓ Vegetation cleared (memory freed)');
         }
         
         scene.add(treesGroup);
@@ -1835,12 +2581,7 @@ car.getSpeed();</textarea>
         arrowHelper1.visible = false;
         scene.add(arrowHelper1);
 
-        const arrowHelper2 = new THREE.ArrowHelper(
-            new THREE.Vector3(0, -1, 0), 
-            new THREE.Vector3(0, 2, 0), 
-            3, 0x44ff44, 0.5, 0.3
-        );
-        scene.add(arrowHelper2);
+        // Green arrow removed - was showing gravity direction but not needed
         
         // Ground contact debug sphere
         const debugSphereGeom = new THREE.SphereGeometry(0.3, 8, 8);
@@ -1856,6 +2597,20 @@ car.getSpeed();</textarea>
         const car = new Car();
         const terrain = new Terrain();
         const keys = {}; // Use const instead of let
+        
+        // Cached terrain normal calculation (moved outside animation loop for performance)
+        function getTerrainNormalCached(x, z) {
+            const h = 0.5;
+            const hL = terrain.getHeight(x - h, z);
+            const hR = terrain.getHeight(x + h, z);
+            const hD = terrain.getHeight(x, z - h);
+            const hU = terrain.getHeight(x, z + h);
+            
+            return {
+                x: (hL - hR) / (2 * h),
+                z: (hD - hU) / (2 * h)
+            };
+        }
 
         const toggleKeyGroup = (keyNames, isActive) => {
             keyNames.forEach((name) => { keys[name] = isActive; });
@@ -1865,41 +2620,108 @@ car.getSpeed();</textarea>
             const el = document.getElementById(id);
             if (!el) return;
 
+            let isPressed = false;
+
             const press = (e) => {
                 e.preventDefault();
+                e.stopPropagation();
+                if (isPressed) return;
+                isPressed = true;
                 toggleKeyGroup(keyNames, true);
                 el.classList.add('active');
             };
 
             const release = (e) => {
-                if (e) e.preventDefault();
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                if (!isPressed) return;
+                isPressed = false;
                 toggleKeyGroup(keyNames, false);
                 el.classList.remove('active');
             };
 
-            ['touchstart', 'mousedown'].forEach((event) => el.addEventListener(event, press, { passive: false }));
-            ['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach((event) => el.addEventListener(event, release));
+            // Prevent text selection and context menu
+            el.addEventListener('selectstart', (e) => e.preventDefault());
+            el.addEventListener('contextmenu', (e) => e.preventDefault());
+
+            // Touch events (primary for mobile)
+            el.addEventListener('touchstart', press, { passive: false });
+            el.addEventListener('touchend', release, { passive: false });
+            el.addEventListener('touchcancel', release, { passive: false });
+
+            // Mouse events (fallback for desktop testing)
+            el.addEventListener('mousedown', press);
+            el.addEventListener('mouseup', release);
+            el.addEventListener('mouseleave', release);
         };
 
         const setupMobileControls = () => {
-            if (!isMobileDevice() || !mobileControlsPanel) return;
-            bindMobileButton('btn-throttle', ['ArrowUp', 'KeyW', 'w', 'W']);
-            bindMobileButton('btn-brake', ['ArrowDown', 'KeyS', 's', 'S']);
+            // Mobile controls: throttle uses ArrowUp, steering uses Arrow keys
+            bindMobileButton('btn-throttle', ['ArrowUp']);
+            bindMobileButton('btn-brake', ['ArrowDown']);
             bindMobileButton('btn-steer-left', ['ArrowLeft', 'KeyA', 'a', 'A']);
             bindMobileButton('btn-steer-right', ['ArrowRight', 'KeyD', 'd', 'D']);
             bindMobileButton('btn-handbrake', [' ', 'Space']);
+            
+            // Mobile gear display element
+            const mobileGearDisplay = document.getElementById('mobile-gear');
+            
+            // Update mobile gear display with gear/max format
+            const updateMobileGear = () => {
+                if (mobileGearDisplay) {
+                    // Use shorter format for mobile (just gear name, not full display)
+                    mobileGearDisplay.textContent = car.getGearName();
+                }
+            };
+            
+            // Gear shift buttons for mobile
+            const shiftUpBtn = document.getElementById('btn-shift-up');
+            const shiftDownBtn = document.getElementById('btn-shift-down');
+            
+            if (shiftUpBtn) {
+                const doShiftUp = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (car.shiftUp()) {
+                        updateMobileGear();
+                    }
+                };
+                shiftUpBtn.addEventListener('click', doShiftUp);
+                shiftUpBtn.addEventListener('touchstart', doShiftUp, { passive: false });
+            }
+            
+            if (shiftDownBtn) {
+                const doShiftDown = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (car.shiftDown()) {
+                        updateMobileGear();
+                    }
+                };
+                shiftDownBtn.addEventListener('click', doShiftDown);
+                shiftDownBtn.addEventListener('touchstart', doShiftDown, { passive: false });
+            }
 
+            // Camera follow button
             const followBtn = document.getElementById('btn-follow');
-            if (followBtn) followBtn.addEventListener('click', () => toggleCameraFollow());
+            if (followBtn) {
+                const doFollow = (e) => { e.preventDefault(); toggleCameraFollow(); };
+                followBtn.addEventListener('click', doFollow);
+                followBtn.addEventListener('touchstart', doFollow, { passive: false });
+            }
 
+            // Reset button
             const resetBtn = document.getElementById('btn-reset');
-            if (resetBtn) resetBtn.addEventListener('click', () => resetCar());
-
-            const debugBtn = document.getElementById('btn-debug');
-            if (debugBtn) debugBtn.addEventListener('click', () => {
-                debugSphere.visible = !debugSphere.visible;
-                console.log('✓ Ground debug:', debugSphere.visible ? 'ON' : 'OFF');
-            });
+            if (resetBtn) {
+                const doReset = (e) => { e.preventDefault(); resetCar(); updateMobileGear(); };
+                resetBtn.addEventListener('click', doReset);
+                resetBtn.addEventListener('touchstart', doReset, { passive: false });
+            }
+            
+            // Store updateMobileGear for use in animation loop
+            window.updateMobileGear = updateMobileGear;
         };
         let paused = false;
         
@@ -1907,76 +2729,145 @@ car.getSpeed();</textarea>
         console.log('Controls initialized. Press arrow keys or WASD to drive.');
         console.log('Current keys object:', keys);
 
+        // PERFORMANCE: Pre-computed color values to avoid object allocation in loop
+        const terrainBaseColor = { r: 0x2d/255, g: 0x5a/255, b: 0x27/255 };
+        const terrainMidColor = { r: 0x4a/255, g: 0x8f/255, b: 0x3c/255 };
+        const terrainPeakColor = { r: 0xb8/255, g: 0xc9/255, b: 0xa0/255 };
+        
+        // PERFORMANCE: Optimized terrain update - avoids object allocation in hot loop
         function updateTerrain() {
             const positions = terrainGeometry.attributes.position.array;
             const colors = terrainGeometry.attributes.color.array;
-
-            const baseColor = new THREE.Color(0x1f3d2a);
-            const midColor = new THREE.Color(0x4f8f5b);
-            const peakColor = new THREE.Color(0xcad7b2);
-
-            // Center terrain around car position for infinite terrain effect
-            const carX = car.position.x;
-            const carZ = car.position.z;
-
-            // Update terrain mesh position to follow car using the terrain origin for continuity
-            if (!terrain.origin) {
-                terrain.origin = { x: 0, z: 0 };
-            }
-            terrain.origin.x = Math.round(carX / terrain.chunkSize) * terrain.chunkSize;
-            terrain.origin.z = Math.round(carZ / terrain.chunkSize) * terrain.chunkSize;
-
-            terrainMesh.position.x = terrain.origin.x;
-            terrainMesh.position.z = terrain.origin.z;
+            const posCount = positions.length;
             
-            // PlaneGeometry creates vertices in XY plane: (x, y, 0)
-            // After rotation.x = -PI/2, the plane is horizontal (XZ plane)
-            // In the geometry buffer (local space):
-            //   positions[i]   = x (stays as X in world)
-            //   positions[i+1] = y (becomes Z in world after rotation)
-            //   positions[i+2] = z (becomes -Y in world after rotation)
-            // So we modify positions[i+2] to set the height (which becomes Y after rotation)
+            // Determine blend factor for smooth transitions when terrain regenerates
+            // During a transition we call updateTerrain() over multiple frames and
+            // gradually morph from old heights to new heights to avoid choppy pops.
+            const isTransitioning = terrain.transitionFrames > 0;
+            const blendFactor = isTransitioning ? 0.3 : 1.0; // 0.3 = gentle morph per frame
+
+            // Center mesh on terrain origin
+            const originX = terrain.origin.x;
+            const originZ = terrain.origin.z;
+            terrainMesh.position.x = originX;
+            terrainMesh.position.z = originZ;
             
-            for (let i = 0; i < positions.length; i += 3) {
-                // Convert local coordinates to world coordinates
+            // PERFORMANCE: Batch process vertices without object allocation
+            // Using direct array access and inline math instead of THREE.Color.lerp()
+            for (let i = 0; i < posCount; i += 3) {
                 const localX = positions[i];
-                const localZ = positions[i + 1];
-                const worldX = localX + terrainMesh.position.x;
-                const worldZ = localZ + terrainMesh.position.z;
+                const localY = positions[i + 1];
+                
+                // IMPORTANT:
+                // PlaneGeometry is created in X/Y space and then rotated -90° around X:
+                //   worldY = localZ (we store height in Z)
+                //   worldZ = -localY
+                // The physics system samples terrain height using world (x, z) coordinates:
+                //   terrainHeight = terrain.getHeight(worldX, worldZ)
+                //
+                // To keep the visual mesh perfectly in sync with physics, we must
+                // sample noise using the same (worldX, worldZ) space that the car uses.
+                //
+                // Therefore, for each vertex:
+                //   worldX = localX + originX
+                //   worldZ = -localY + originZ
+                //
+                // This mirrors the plane's Y axis into world Z and fixes car/terrain
+                // mismatch where the car could appear to float or sink into the ground.
+                const worldX = localX + originX;
+                const worldZ = -localY + originZ;
 
-                const height = terrain.getHeight(worldX, worldZ);
-                positions[i + 2] = -height;  // NEGATIVE because rotation flips Z to -Y
+                // Get height (terrain.getHeight is already optimized and now
+                // uses the exact same coordinate system as the physics)
+                const targetHeight = terrain.getHeight(worldX, worldZ);
+                
+                // Smoothly blend from previous height to new target height to avoid
+                // harsh popping when terrain chunks move or type changes.
+                const prevHeight = positions[i + 2];
+                const newHeight = prevHeight + (targetHeight - prevHeight) * blendFactor;
+                positions[i + 2] = newHeight;
 
-                const colorIndex = (i / 3) * 3;
-                const elevation = THREE.MathUtils.clamp((height + 12) / 35, 0, 1);
-                const blendColor = new THREE.Color();
-
-                if (elevation < 0.55) {
-                    blendColor.copy(baseColor).lerp(midColor, elevation / 0.55);
+                // PERFORMANCE: Inline color interpolation (no object allocation)
+                // Clamp t between 0 and 1
+                let t = (height + 5) * 0.04; // Equivalent to (height + 5) / 25
+                t = t < 0 ? 0 : (t > 1 ? 1 : t);
+                
+                // Direct lerp without creating Color objects
+                const ci = i; // Color index matches position index
+                if (t < 0.5) {
+                    const t2 = t * 2;
+                    colors[ci] = terrainBaseColor.r + (terrainMidColor.r - terrainBaseColor.r) * t2;
+                    colors[ci + 1] = terrainBaseColor.g + (terrainMidColor.g - terrainBaseColor.g) * t2;
+                    colors[ci + 2] = terrainBaseColor.b + (terrainMidColor.b - terrainBaseColor.b) * t2;
                 } else {
-                    blendColor.copy(midColor).lerp(peakColor, (elevation - 0.55) / 0.45);
+                    const t2 = (t - 0.5) * 2;
+                    colors[ci] = terrainMidColor.r + (terrainPeakColor.r - terrainMidColor.r) * t2;
+                    colors[ci + 1] = terrainMidColor.g + (terrainPeakColor.g - terrainMidColor.g) * t2;
+                    colors[ci + 2] = terrainMidColor.b + (terrainPeakColor.b - terrainMidColor.b) * t2;
                 }
-
-                colors[colorIndex] = blendColor.r;
-                colors[colorIndex + 1] = blendColor.g;
-                colors[colorIndex + 2] = blendColor.b;
             }
 
+            // Mark geometry for GPU update
             terrainGeometry.attributes.position.needsUpdate = true;
             terrainGeometry.attributes.color.needsUpdate = true;
-            terrainGeometry.computeVertexNormals();
-            terrain.needsUpdate = false;
             
-            console.log('✓ Terrain auto-generated at car position:', carX.toFixed(1), carZ.toFixed(1), '| Type:', terrain.type);
+            // PERFORMANCE: Only compute normals (bounding sphere rarely needed)
+            terrainGeometry.computeVertexNormals();
+            // Skip computeBoundingSphere - not needed every frame
+            
+            // If we're in a transition, keep updating terrain for a few frames
+            // so the blend completes smoothly. Otherwise, mark update as finished.
+            if (isTransitioning) {
+                terrain.transitionFrames = Math.max(terrain.transitionFrames - 1, 0);
+                terrain.needsUpdate = terrain.transitionFrames > 0;
+            } else {
+                terrain.needsUpdate = false;
+            }
+            
+            // PERFORMANCE: Update shadow map after terrain change
+            renderer.shadowMap.needsUpdate = true;
         }
         
         // Initial terrain setup
         updateTerrain();
         
+        // Position car correctly on initial terrain
+        const initialTerrainHeight = terrain.getHeight(0, 0);
+        const targetGroundY = initialTerrainHeight + car.wheelRadius + car.groundClearance;
+        car.position.y = targetGroundY; // Start exactly on ground
+        car.onGround = true; // Start on ground
+        car.verticalVelocity = 0;
+        
+        console.log('✓ Terrain:', terrain.type, '| Height at (0,0):', initialTerrainHeight.toFixed(2));
+        console.log('✓ Car Y:', car.position.y.toFixed(2), '| wheelR:', car.wheelRadius, '| clearance:', car.groundClearance);
+        
 
 
         // Input handling - MUST be after keys object is defined
+        // Helper to check if user is typing in an input field
+        const isTypingInInput = () => {
+            const activeEl = document.activeElement;
+            const tagName = activeEl ? activeEl.tagName.toLowerCase() : '';
+            return tagName === 'input' || tagName === 'textarea' || tagName === 'select' || activeEl.isContentEditable;
+        };
+
+        // Clear all keys when focus changes to prevent stuck keys
+        const clearAllKeys = () => {
+            Object.keys(keys).forEach(key => { keys[key] = false; });
+        };
+
+        // Clear keys when code editor or any input gets focus
+        document.getElementById('code-editor').addEventListener('focus', clearAllKeys);
+        document.querySelectorAll('input, select').forEach(el => {
+            el.addEventListener('focus', clearAllKeys);
+        });
+
         document.addEventListener('keydown', (e) => {
+            // Skip car controls when typing in input fields
+            if (isTypingInInput()) {
+                return;
+            }
+            
             keys[e.key] = true;
             keys[e.code] = true;
             
@@ -2001,13 +2892,18 @@ car.getSpeed();</textarea>
                 e.preventDefault();
             }
             
-            // Debug output
-            if (e.key.includes('Arrow') || e.key === ' ' || 'wasd'.includes(e.key.toLowerCase())) {
-                console.log('✓ Key pressed:', e.key, '- Throttle:', car.throttle, 'Steering:', car.steering);
-            }
+            // Debug output (disabled for production)
+            // if (e.key.includes('Arrow') || e.key === ' ' || 'wasd'.includes(e.key.toLowerCase())) {
+            //     console.log('✓ Key pressed:', e.key, '- Throttle:', car.throttle, 'Steering:', car.steering);
+            // }
         });
         
         document.addEventListener('keyup', (e) => {
+            // Skip when typing in input fields
+            if (isTypingInInput()) {
+                return;
+            }
+            
             keys[e.key] = false;
             keys[e.code] = false;
             
@@ -2024,9 +2920,10 @@ car.getSpeed();</textarea>
         });
         
         // Enhanced camera controls - Touch and Mouse
-        let zoomLevel = 25; // Initial camera distance (closer for better view)
+        // Slightly closer, lower camera by default for a more dynamic view
+        let zoomLevel = 18; // Initial camera distance (smaller = closer to car)
         let cameraAngle = 0; // Horizontal rotation around car
-        let cameraPitch = 0.5; // Vertical angle (slightly higher for better view)
+        let cameraPitch = 0.45; // Vertical angle (a bit lower for more road in view)
         let isDragging = false;
         let lastTouchX = 0;
         let lastTouchY = 0;
@@ -2042,6 +2939,11 @@ car.getSpeed();</textarea>
         
         // Mouse drag controls
         canvas.addEventListener('mousedown', (e) => {
+            // Only allow camera drag with right mouse button on desktop
+            // so holding throttle/brake with left button doesn't rotate view.
+            if (e.button !== 2) {
+                return;
+            }
             isDragging = true;
             lastTouchX = e.clientX;
             lastTouchY = e.clientY;
@@ -2091,6 +2993,12 @@ car.getSpeed();</textarea>
         
         // Touch controls for mobile
         canvas.addEventListener('touchstart', (e) => {
+            // Don't start camera drag if touch originated from mobile controls
+            const target = e.target;
+            if (target && (target.closest('.mobile-control-panel') || target.closest('#controls'))) {
+                return;
+            }
+            
             if (e.touches.length === 1) {
                 isDragging = true;
                 lastTouchX = e.touches[0].clientX;
@@ -2158,7 +3066,12 @@ car.getSpeed();</textarea>
         
         // Click viewport to focus for keyboard controls
         canvas.addEventListener('click', () => {
-            canvas.focus();
+            // Blur any active input/textarea to enable car controls
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || 
+                document.activeElement.tagName === 'TEXTAREA' || 
+                document.activeElement.tagName === 'SELECT')) {
+                document.activeElement.blur();
+            }
             document.getElementById('instructions').style.opacity = '1';
         });
         
@@ -2167,6 +3080,48 @@ car.getSpeed();</textarea>
 
         // Track quality selection for HDR activation
         let currentQuality = 'medium';
+
+        // PERFORMANCE: Cache ALL DOM elements at startup (avoid getElementById in render loop)
+        const domCache = {
+            speed: document.getElementById('speed'),
+            rpm: document.getElementById('rpm'),
+            gear: document.getElementById('gear'),
+            speed2: document.getElementById('speed2'),
+            speedKph: document.getElementById('speed-kph'),
+            speedKmhHud: document.getElementById('speed-kmh-hud'),
+            rpm2: document.getElementById('rpm2'),
+            gear2: document.getElementById('gear2'),
+            gforce: document.getElementById('gforce'),
+            downforce: document.getElementById('downforce'),
+            rollAngle: document.getElementById('roll-angle'),
+            pitchAngle: document.getElementById('pitch-angle'),
+            loadTransfer: document.getElementById('load-transfer'),
+            tcIndicator: document.getElementById('tc-indicator'),
+            absIndicator: document.getElementById('abs-indicator'),
+            tcStatus: document.getElementById('tc-status'),
+            absStatus: document.getElementById('abs-status'),
+            hudTireTemp: document.getElementById('hud-tire-temp'),
+            hudTireWear: document.getElementById('hud-tire-wear'),
+            camZoom: document.getElementById('cam-zoom'),
+            camAngle: document.getElementById('cam-angle'),
+            camPitch: document.getElementById('cam-pitch'),
+            camMode: document.getElementById('cam-mode'),
+            drawCalls: document.getElementById('draw-calls'),
+            triangles: document.getElementById('triangles'),
+            fpsDisplay: document.getElementById('fps-display'),
+            qualityDisplay: document.getElementById('quality-display'),
+            rpmFill: document.getElementById('rpm-fill'),
+            shiftIndicator: document.getElementById('shift-indicator'),
+            // PERFORMANCE: Added missing cached elements
+            torqueOutput: document.getElementById('torque-output'),
+            powerBand: document.getElementById('power-band'),
+            tireElements: {
+                fl: { temp: document.getElementById('tire-temp-fl'), wear: document.getElementById('tire-wear-fl'), load: document.getElementById('tire-load-fl') },
+                fr: { temp: document.getElementById('tire-temp-fr'), wear: document.getElementById('tire-wear-fr'), load: document.getElementById('tire-load-fr') },
+                rl: { temp: document.getElementById('tire-temp-rl'), wear: document.getElementById('tire-wear-rl'), load: document.getElementById('tire-load-rl') },
+                rr: { temp: document.getElementById('tire-temp-rr'), wear: document.getElementById('tire-wear-rr'), load: document.getElementById('tire-load-rr') }
+            }
+        };
 
         // Advanced performance monitoring
         let frameCount = 0;
@@ -2179,81 +3134,71 @@ car.getSpeed();</textarea>
         // Advanced quality settings with performance optimization
         window.setQuality = (quality) => {
             currentQuality = quality;
-            document.getElementById('quality-display').textContent = quality.charAt(0).toUpperCase() + quality.slice(1);
+            if (domCache.qualityDisplay) domCache.qualityDisplay.textContent = quality.charAt(0).toUpperCase() + quality.slice(1);
             
             switch(quality) {
                 case 'low':
                     renderer.setPixelRatio(1);
                     renderer.shadowMap.enabled = false;
-                    renderer.shadowMap.autoUpdate = false;
                     renderer.toneMapping = THREE.LinearToneMapping;
                     sunLight.intensity = 2.0;
-                    // Disable HDR for low quality
                     if (window.hdrTexture) {
                         scene.environment = null;
                         scene.background = new THREE.Color(0x87ceeb);
                         document.getElementById('hdr-enabled').checked = false;
                         document.getElementById('hdr-enabled').disabled = true;
                     }
-                    // Clear vegetation for low quality
-                    if (typeof clearVegetation === 'function') {
-                        clearVegetation();
-                    }
+                    if (typeof clearVegetation === 'function') clearVegetation();
+                    // Stronger fog / closer far plane on low for maximum performance
+                    scene.fog.near = 50;
+                    scene.fog.far = 140;
                     break;
                     
                 case 'medium':
                     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
                     renderer.shadowMap.enabled = true;
-                    renderer.shadowMap.autoUpdate = true;
                     renderer.shadowMap.type = THREE.BasicShadowMap;
                     renderer.toneMapping = THREE.ACESFilmicToneMapping;
                     sunLight.intensity = 2.5;
                     sunLight.shadow.mapSize.width = 1024;
                     sunLight.shadow.mapSize.height = 1024;
-                    // Disable HDR for medium quality
                     if (window.hdrTexture) {
                         scene.environment = null;
                         scene.background = new THREE.Color(0x87ceeb);
                         document.getElementById('hdr-enabled').checked = false;
                         document.getElementById('hdr-enabled').disabled = true;
                     }
-                    // Clear vegetation for medium quality
-                    if (typeof clearVegetation === 'function') {
-                        clearVegetation();
-                    }
+                    if (typeof clearVegetation === 'function') clearVegetation();
+                    // Balanced fog range for medium quality
+                    scene.fog.near = 60;
+                    scene.fog.far = 180;
                     break;
                     
                 case 'high':
                     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
                     renderer.shadowMap.enabled = true;
-                    renderer.shadowMap.autoUpdate = true;
                     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
                     renderer.toneMapping = THREE.ACESFilmicToneMapping;
                     sunLight.shadow.mapSize.width = 2048;
                     sunLight.shadow.mapSize.height = 2048;
-                    // Enable HDR for high quality
                     if (window.hdrTexture) {
                         scene.environment = window.hdrTexture;
                         scene.background = window.hdrTexture;
-                        // Adjust lighting for HDR to preserve shadows
                         ambientLight.intensity = 0.3;
-                        sunLight.intensity = 3.5; // Stronger sun for visible shadows with HDR
+                        sunLight.intensity = 3.5;
                         document.getElementById('hdr-enabled').checked = true;
                         document.getElementById('hdr-enabled').disabled = false;
-                        console.log('✓ HDR environment enabled (High Quality) - lighting adjusted for shadows');
                     } else {
-                        // No HDR, use normal lighting
                         ambientLight.intensity = 0.6;
                         sunLight.intensity = 2.5;
                     }
-                    // Spawn vegetation for high quality
-                    if (typeof spawnVegetation === 'function') {
-                        spawnVegetation();
-                    }
+                    if (typeof spawnVegetation === 'function') spawnVegetation();
+                    // Slightly farther fog for high quality while still capping view distance
+                    scene.fog.near = 70;
+                    scene.fog.far = 220;
                     break;
             }
             
-            // Force shadow map update
             if (renderer.shadowMap.enabled) {
                 renderer.shadowMap.needsUpdate = true;
             }
@@ -2279,7 +3224,6 @@ car.getSpeed();</textarea>
             
             // Safety check for invalid delta time
             if (isNaN(deltaTime) || deltaTime < 0 || deltaTime > 1000) {
-                console.warn('⚠️ Invalid deltaTime:', deltaTime, '- resetting');
                 lastFrameTime = currentTime;
                 deltaAccumulator = 0;
                 return;
@@ -2292,7 +3236,7 @@ car.getSpeed();</textarea>
             frameCount++;
             if (currentTime - lastFPSUpdate >= 1000) {
                 currentFPS = frameCount;
-                document.getElementById('fps-display').textContent = currentFPS;
+                if (domCache.fpsDisplay) domCache.fpsDisplay.textContent = currentFPS;
                 
                 // Track FPS history
                 fpsHistory.push(currentFPS);
@@ -2301,14 +3245,14 @@ car.getSpeed();</textarea>
                 // Auto-adjust quality based on performance (only after 5 seconds)
                 if (autoQualityEnabled && currentTime > 5000 && currentTime - lastQualityAdjust > 3000) {
                     const avgFPS = fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length;
-                    const currentQuality = document.getElementById('quality-display').textContent.toLowerCase();
+                    const qualityText = domCache.qualityDisplay ? domCache.qualityDisplay.textContent.toLowerCase() : currentQuality;
                     
-                    if (avgFPS < 20 && currentQuality !== 'low') {
+                    if (avgFPS < 20 && qualityText !== 'low') {
                         console.warn('⚠️ Low FPS detected, reducing quality');
-                        if (currentQuality === 'high') setQuality('medium');
-                        else if (currentQuality === 'medium') setQuality('low');
+                        if (qualityText === 'high') setQuality('medium');
+                        else if (qualityText === 'medium') setQuality('low');
                         lastQualityAdjust = currentTime;
-                    } else if (avgFPS > 55 && currentQuality === 'low') {
+                    } else if (avgFPS > 55 && qualityText === 'low') {
                         console.log('✓ Good FPS, increasing quality');
                         setQuality('medium');
                         lastQualityAdjust = currentTime;
@@ -2329,29 +3273,174 @@ car.getSpeed();</textarea>
                 deltaAccumulator = 0;
             }
             
+            // Track gear shift key states to prevent repeated shifts
+            if (!window.gearShiftState) {
+                window.gearShiftState = { upPressed: false, downPressed: false };
+            }
+            
             if (!paused) {
-                // Handle all controls - check both key and code (KeyW, KeyA, KeyS, KeyD)
-                car.throttle = (keys['ArrowUp'] || keys['w'] || keys['W'] || keys['KeyW']) ? 1 : 0;
-                car.brake = (keys['ArrowDown'] || keys['s'] || keys['S'] || keys['KeyS']) ? 1 : 0;
-                car.steering = ((keys['ArrowLeft'] || keys['a'] || keys['A'] || keys['KeyA']) ? -1 : 0) + 
-                              ((keys['ArrowRight'] || keys['d'] || keys['D'] || keys['KeyD']) ? 1 : 0);
+                // GEAR SHIFTING: W = shift up, S = shift down
+                const shiftUpPressed = keys['w'] || keys['W'] || keys['KeyW'];
+                const shiftDownPressed = keys['s'] || keys['S'] || keys['KeyS'];
                 
-                // Handbrake (Space key)
+                // Shift up (W) - only on key press, not hold
+                if (shiftUpPressed && !window.gearShiftState.upPressed) {
+                    if (car.shiftUp()) {
+                        console.log('⬆️ Shifted to:', car.getGearName());
+                    }
+                    window.gearShiftState.upPressed = true;
+                } else if (!shiftUpPressed) {
+                    window.gearShiftState.upPressed = false;
+                }
+                
+                // Shift down (S) - only on key press, not hold
+                if (shiftDownPressed && !window.gearShiftState.downPressed) {
+                    if (car.shiftDown()) {
+                        console.log('⬇️ Shifted to:', car.getGearName());
+                    }
+                    window.gearShiftState.downPressed = true;
+                } else if (!shiftDownPressed) {
+                    window.gearShiftState.downPressed = false;
+                }
+                
+                // -----------------------------------------------------------------
+                // INPUT → ANALOG CONTROL MAPPING (smooth desktop controls)
+                // -----------------------------------------------------------------
+                const throttlePressed = keys['ArrowUp'];
+                const brakePressed = keys['ArrowDown'];
+                const steerLeftPressed  = keys['ArrowLeft'] || keys['a'] || keys['A'] || keys['KeyA'];
+                const steerRightPressed = keys['ArrowRight'] || keys['d'] || keys['D'] || keys['KeyD'];
+
+                // Desired raw inputs in [-1, 1]
+                let targetThrottle = 0;
+                let targetBrake    = 0;
+                let targetSteer    = 0;
+
+                if (throttlePressed) {
+                    targetThrottle = 1;
+                } else if (brakePressed) {
+                    if (car.gear < 0) {
+                        // In reverse gears ArrowDown behaves like throttle
+                        targetThrottle = 1;
+                    } else {
+                        // In forward gears ArrowDown is a brake pedal
+                        targetBrake = 0.8;
+                    }
+                }
+
+                if (steerLeftPressed)  targetSteer += 1;
+                if (steerRightPressed) targetSteer -= 1;
+
+                // Smooth interpolation (per-frame low‑pass filter)
+                const inputLerp = 0.12; // Smaller = smoother
+                const lerp = (from, to, t) => from + (to - from) * t;
+
+                car.throttle = lerp(car.throttle, targetThrottle, inputLerp);
+                car.brake    = lerp(car.brake,    targetBrake,    inputLerp);
+                car.steering = lerp(car.steering, targetSteer,    inputLerp * 1.5); // steering a bit more responsive
+
+                // Handbrake (Space key) - hard brake override, still smoothed
                 if (keys[' '] || keys['Space']) {
-                    car.brake = 1.5; // Stronger braking
+                    const handbrakeTarget = 1;
+                    car.brake = lerp(car.brake, handbrakeTarget, inputLerp * 2);
+                    car.throttle = lerp(car.throttle, 0, inputLerp * 2);
+                } else if (!throttlePressed && !brakePressed) {
+                    // When nothing is pressed, gently release the brake instead of snapping to 0
+                    car.brake = lerp(car.brake, 0, inputLerp);
+                }
+
+                // =====================================================================
+                // TERRAIN UPDATE CHECK - MUST happen BEFORE car physics!
+                // This prevents coordinate mismatch when terrain regenerates
+                // =====================================================================
+                let skipPhysicsThisFrame = false;
+                const terrainStatus = terrain.checkUpdate(car.position.x, car.position.z);
+                
+                if (terrainStatus.rebase) {
+                    // Floating-origin rebase: move car back to origin while keeping terrain continuous
+                    // This prevents floating-point precision loss at large distances
+                    car.position.x -= terrainStatus.offsetX;
+                    car.position.z -= terrainStatus.offsetZ;
+                    
+                    // Also move camera target if in free mode
+                    if (!cameraFollowCar) {
+                        cameraTarget.x -= terrainStatus.offsetX;
+                        cameraTarget.z -= terrainStatus.offsetZ;
+                    }
+                    
+                    // Update terrain mesh BEFORE physics runs
+                    updateTerrain();
+                    
+                    // Respawn vegetation at new positions
+                    if (typeof spawnVegetation === 'function' && vegetationLoaded) {
+                        spawnVegetation();
+                    }
+                    
+                    // Reproject car to new terrain coordinate system
+                    const newTerrainHeight = terrain.getHeight(car.position.x, car.position.z);
+                    const targetY = newTerrainHeight + car.wheelRadius + car.groundClearance;
+                    car.position.y = targetY;
+                    car.verticalVelocity = 0;
+                    car.onGround = true;
+                    
+                    // Skip physics this frame to prevent glitches from stale wheel heights
+                    skipPhysicsThisFrame = true;
+                    
+                    showNotification('🌍 World origin rebased for precision', 'info');
+                    console.log('✓ Car repositioned to:', car.position.x.toFixed(1), car.position.z.toFixed(1));
+                } else if (terrainStatus.needsUpdate) {
+                    // Normal chunk update - terrain mesh repositioned
+                    updateTerrain();
+                    
+                    // Respawn trees at new terrain heights
+                    if (typeof spawnVegetation === 'function' && vegetationLoaded) {
+                        spawnVegetation();
+                    }
+                    
+                    // Smoothly adjust car to new terrain height to prevent floating/sinking
+                    const newTerrainHeight = terrain.getHeight(car.position.x, car.position.z);
+                    const targetY = newTerrainHeight + car.wheelRadius + car.groundClearance;
+                    if (car.onGround && Math.abs(car.position.y - targetY) > 0.5) {
+                        car.position.y = targetY;
+                        car.verticalVelocity = 0;
+                    }
+                }
+                
+                // Manual terrain update trigger
+                if (terrain.needsUpdate) {
+                    updateTerrain();
                 }
 
                 // Run physics with fixed timestep - multiple steps if needed for slow devices
+                // Skip physics if terrain just regenerated to prevent coordinate mismatch glitches
                 let steps = 0;
-                while (deltaAccumulator >= targetFrameTime && steps < maxPhysicsSteps) {
-                    car.update(fixedDeltaTime, terrain);
-                    deltaAccumulator -= targetFrameTime;
-                    steps++;
+                if (!skipPhysicsThisFrame) {
+                    while (deltaAccumulator >= targetFrameTime && steps < maxPhysicsSteps) {
+                        car.update(fixedDeltaTime, terrain);
+                        deltaAccumulator -= targetFrameTime;
+                        steps++;
+                    }
+                } else {
+                    // Reset accumulator to prevent physics catchup next frame
+                    deltaAccumulator = 0;
                 }
                 
-                // Debug: Log if physics isn't running
-                if (steps === 0 && Math.random() < 0.05) {
-                    console.warn('⚠️ Physics not running! Accumulator:', deltaAccumulator.toFixed(2), 'Target:', targetFrameTime);
+                // Safety check: Ensure car position is always valid (no NaN/Infinity)
+                if (!Number.isFinite(car.position.x) || !Number.isFinite(car.position.y) || !Number.isFinite(car.position.z)) {
+                    console.warn('⚠️ Invalid car position detected - resetting');
+                    const safeHeight = terrain.getHeight(0, 0) + car.wheelRadius + car.groundClearance + 2;
+                    car.position = new Vec3(0, safeHeight, 0);
+                    car.velocity = new Vec3(0, 0, 0);
+                    car.verticalVelocity = 0;
+                }
+                
+                // Safety check: Prevent car from falling through world (below -100)
+                if (car.position.y < -100) {
+                    console.warn('⚠️ Car fell through world - recovering');
+                    const recoveryHeight = terrain.getHeight(car.position.x, car.position.z);
+                    car.position.y = recoveryHeight + car.wheelRadius + car.groundClearance;
+                    car.verticalVelocity = 0;
+                    car.onGround = true;
                 }
                 
                 // If we're running too slow, discard excess time to prevent spiral of death
@@ -2364,13 +3453,13 @@ car.getSpeed();</textarea>
                     // Car position is center of mass, mesh needs to sit on ground
                     carMesh.position.set(car.position.x, car.position.y, car.position.z);
                     
-                    // Apply physics rotation with model offset correction
-                    // Add -90° offset to align model with physics forward direction
-                    carMesh.rotation.y = car.rotation - Math.PI / 2;
+                    // Apply physics rotation with model-specific offset correction
+                    // Each car model may have different forward direction
+                    carMesh.rotation.y = car.rotation + carModelRotationOffset;
                     
                     // Tilt car based on terrain slope for realism
                     if (car.onGround) {
-                        const terrainNormal = getTerrainNormal(car.position.x, car.position.z);
+                        const terrainNormal = getTerrainNormalCached(car.position.x, car.position.z);
                         if (terrainNormal) {
                             const tiltAmount = 0.1;
                             carMesh.rotation.x = terrainNormal.x * tiltAmount;
@@ -2386,21 +3475,8 @@ car.getSpeed();</textarea>
                 sunLight.position.set(car.position.x + 50, 100, car.position.z + 50);
                 sunLight.target.position.set(car.position.x, 0, car.position.z);
                 sunLight.target.updateMatrixWorld();
-                
-                function getTerrainNormal(x, z) {
-                    const h = 0.5;
-                    const hL = terrain.getHeight(x - h, z);
-                    const hR = terrain.getHeight(x + h, z);
-                    const hD = terrain.getHeight(x, z - h);
-                    const hU = terrain.getHeight(x, z + h);
-                    
-                    return {
-                        x: (hL - hR) / (2 * h),
-                        z: (hD - hU) / (2 * h)
-                    };
-                }
 
-                // Advanced camera system - orbits around car with smooth follow
+                // Advanced camera system - orbits around car with smooth, polished follow
                 if (cameraFollowCar) {
                     // Calculate camera position based on angle, pitch, and zoom
                     const carX = car.position.x;
@@ -2412,17 +3488,39 @@ car.getSpeed();</textarea>
                     const targetY = carY + zoomLevel * Math.sin(cameraPitch);
                     const targetZ = carZ + zoomLevel * Math.cos(-cameraAngle) * Math.cos(cameraPitch);
                     
-                    // Smooth camera movement (lerp)
-                    const smoothness = 0.1;
-                    camera.position.x += (targetX - camera.position.x) * smoothness;
-                    camera.position.y += (targetY - camera.position.y) * smoothness;
-                    camera.position.z += (targetZ - camera.position.z) * smoothness;
+                    // Smooth camera movement with slight speed‑based lead and damping
+                    const smoothPos = 0.12; // position smoothing
+                    const smoothLook = 0.18; // look-at smoothing
+
+                    // Lead camera a bit in the direction of travel for a more dynamic feel
+                    const vel = car.velocity;
+                    const speed = vel.length();
+                    const maxLead = 2.0; // meters
+                    const leadFactor = Math.min(1, speed / 25);
+                    const leadX = (vel.x || 0) * 0.03 * leadFactor;
+                    const leadZ = (vel.z || 0) * 0.03 * leadFactor;
+
+                    // Target camera position (with small velocity lead)
+                    const camTargetX = targetX + leadX;
+                    const camTargetY = targetY;
+                    const camTargetZ = targetZ + leadZ;
+
+                    camera.position.x += (camTargetX - camera.position.x) * smoothPos;
+                    camera.position.y += (camTargetY - camera.position.y) * smoothPos;
+                    camera.position.z += (camTargetZ - camera.position.z) * smoothPos;
                     
-                    // Always look at the car
-                    camera.lookAt(carX, carY, carZ);
+                    // Smooth look-at towards car (also slightly ahead)
+                    const lookAheadX = carX + leadX * 1.5;
+                    const lookAheadZ = carZ + leadZ * 1.5;
+                    const currentTarget = cameraTarget.clone();
+                    currentTarget.x += (lookAheadX - currentTarget.x) * smoothLook;
+                    currentTarget.y += (carY - currentTarget.y) * smoothLook;
+                    currentTarget.z += (lookAheadZ - currentTarget.z) * smoothLook;
+
+                    camera.lookAt(currentTarget);
                     
                     // Update camera target for free mode
-                    cameraTarget.set(carX, carY, carZ);
+                    cameraTarget.copy(currentTarget);
                 } else {
                     // Free camera mode - look at stored target
                     camera.lookAt(cameraTarget.x, cameraTarget.y, cameraTarget.z);
@@ -2441,139 +3539,175 @@ car.getSpeed();</textarea>
                     arrowHelper1.visible = false;
                 }
 
-                arrowHelper2.position.set(car.position.x, car.position.y + 2, car.position.z);
-                
                 // Update debug sphere to show ground contact point
                 if (debugSphere.visible) {
                     const terrainHeight = terrain.getHeight(car.position.x, car.position.z);
                     debugSphere.position.set(car.position.x, terrainHeight, car.position.z);
                 }
-
-                // Auto-update terrain based on car movement (infinite terrain)
-                // Check every frame for smooth terrain generation
-                if (terrain.checkUpdate(car.position.x, car.position.z)) {
-                    updateTerrain();
-                    // Respawn trees at new terrain heights
-                    if (typeof spawnVegetation === 'function' && vegetationLoaded) {
-                        spawnVegetation();
-                    }
-                    showNotification('🗺️ Terrain auto-generated', 'info');
-                }
                 
-                // Manual terrain update trigger
-                if (terrain.needsUpdate) {
-                    updateTerrain();
-                }
+                // NOTE: Terrain update check moved to BEFORE physics update (see above)
+                // This prevents coordinate mismatch glitches when terrain regenerates
             }
 
-            // Update UI (throttled to reduce DOM updates)
-            if (frameCount % 3 === 0) { // Update every 3 frames
+            // PERFORMANCE: Update UI less frequently (every 6 frames = ~10Hz)
+            // DOM updates are expensive - batch them and reduce frequency
+            if (frameCount % 6 === 0) {
                 const speed = car.velocity.length();
-                // Only show airborne badge after being in the air for a short, noticeable duration
+                const speedKph = (speed * 3.6) | 0; // Bitwise OR for fast floor
+                const rpm = car.engineRPM | 0;
                 const showAirborne = !car.onGround && car.airborneTime > 0.2;
-                const statusText = showAirborne ? ` (AIRBORNE ${car.airborneTime.toFixed(1)}s)` : '';
-                document.getElementById('speed').textContent = speed.toFixed(1) + statusText;
-                document.getElementById('rpm').textContent = Math.round(car.engineRPM);
-                document.getElementById('gear').textContent = car.gear;
-                document.getElementById('speed2').textContent = speed.toFixed(1);
-                document.getElementById('rpm2').textContent = Math.round(car.engineRPM);
-                document.getElementById('gear2').textContent = car.gear;
-                document.getElementById('gforce').textContent = (car.getCentripetalForce() / (car.mass * 9.81)).toFixed(1);
+                
+                // PERFORMANCE: Batch DOM updates - only update if values changed significantly
+                if (domCache.speed) {
+                    const statusText = showAirborne ? ` (AIR ${car.airborneTime.toFixed(1)}s)` : '';
+                    domCache.speed.textContent = speed.toFixed(1) + statusText;
+                }
+                if (domCache.rpm) domCache.rpm.textContent = rpm;
+                if (domCache.gear) domCache.gear.textContent = car.getGearDisplayFull();
+                if (domCache.speed2) domCache.speed2.textContent = speed.toFixed(1);
+                if (domCache.speedKph) domCache.speedKph.textContent = speedKph;
+                if (domCache.rpm2) domCache.rpm2.textContent = rpm;
+                if (domCache.gear2) domCache.gear2.textContent = car.getGearDisplayFull();
+                
+                // PERFORMANCE: Cache gforce calculation (expensive)
+                const gforce = (car.getCentripetalForce() / (car.mass * 9.81));
+                if (domCache.gforce) domCache.gforce.textContent = gforce.toFixed(1);
+                
+                // PERFORMANCE: Use cached elements instead of getElementById in loop
+                if (domCache.torqueOutput) {
+                    const torquePercent = (car.getTorqueMultiplier() * 100) | 0;
+                    domCache.torqueOutput.textContent = torquePercent;
+                    domCache.torqueOutput.style.color = torquePercent < 70 ? '#4a90e2' : 
+                        (torquePercent < 95 ? '#4ec9b0' : '#ff6b35');
+                }
+                
+                // PERFORMANCE: Simplified power band update
+                if (domCache.powerBand) {
+                    const bands = ['Idle', 'Low', 'Mid', 'Peak', 'Power', 'Redline!'];
+                    const colors = ['#888', '#4a90e2', '#4ec9b0', '#7ed321', '#ffa500', '#ff4444'];
+                    const idx = rpm < 1500 ? 0 : rpm < 3000 ? 1 : rpm < 4500 ? 2 : 
+                                rpm < 6000 ? 3 : rpm < 7000 ? 4 : 5;
+                    domCache.powerBand.textContent = bands[idx];
+                    domCache.powerBand.style.color = colors[idx];
+                }
+                
+                if (domCache.speedKmhHud) domCache.speedKmhHud.textContent = speedKph;
+                
+                // Update RPM bar visualization
+                if (domCache.rpmFill) {
+                    const rpmPercent = Math.min(100, (car.engineRPM / 7500) * 100);
+                    domCache.rpmFill.style.width = rpmPercent + '%';
+                    // Color based on RPM zone
+                    if (car.engineRPM < 3000) {
+                        domCache.rpmFill.style.background = 'linear-gradient(90deg, #4a90e2, #4ec9b0)'; // Blue-green (low)
+                    } else if (car.engineRPM < 5500) {
+                        domCache.rpmFill.style.background = 'linear-gradient(90deg, #4ec9b0, #7ed321)'; // Green (optimal)
+                    } else if (car.engineRPM < 6800) {
+                        domCache.rpmFill.style.background = 'linear-gradient(90deg, #ffa500, #ff6b35)'; // Orange (power band)
+                    } else {
+                        domCache.rpmFill.style.background = 'linear-gradient(90deg, #ff4444, #ff0000)'; // Red (redline)
+                    }
+                }
+                
+                // Update shift indicator
+                if (domCache.shiftIndicator) {
+                    if (car.gear > 0 && car.gear < car.maxForwardGear && car.engineRPM > 6500) {
+                        domCache.shiftIndicator.textContent = '⬆ SHIFT';
+                        domCache.shiftIndicator.style.color = car.engineRPM > 7000 ? '#ff4444' : '#ffa500';
+                    } else if (car.gear > 1 && car.engineRPM < 2000 && speed > 5) {
+                        domCache.shiftIndicator.textContent = '⬇ DOWNSHIFT';
+                        domCache.shiftIndicator.style.color = '#4a90e2';
+                    } else {
+                        domCache.shiftIndicator.textContent = '';
+                    }
+                }
+                
+                // Update mobile gear display with full gear info
+                if (window.updateMobileGear) window.updateMobileGear();
                 
                 // Update advanced telemetry
-                document.getElementById('downforce').textContent = Math.round(car.downforce) + ' N';
-                document.getElementById('roll-angle').textContent = (car.rollAngle * 57.3).toFixed(1) + '°';
-                document.getElementById('pitch-angle').textContent = (car.pitchAngle * 57.3).toFixed(1) + '°';
-                document.getElementById('load-transfer').textContent = car.loadTransfer;
+                if (domCache.downforce) domCache.downforce.textContent = Math.round(car.downforce) + ' N';
+                if (domCache.rollAngle) domCache.rollAngle.textContent = (car.rollAngle * 57.3).toFixed(1) + '°';
+                if (domCache.pitchAngle) domCache.pitchAngle.textContent = (car.pitchAngle * 57.3).toFixed(1) + '°';
+                if (domCache.loadTransfer) domCache.loadTransfer.textContent = car.loadTransfer;
                 
-                // Update tire data
+                // Update tire data using cached elements
                 const tireIds = ['fl', 'fr', 'rl', 'rr'];
                 car.tires.forEach((tire, i) => {
                     const id = tireIds[i];
-                    const tempEl = document.getElementById(`tire-temp-${id}`);
-                    const wearEl = document.getElementById(`tire-wear-${id}`);
-                    const loadEl = document.getElementById(`tire-load-${id}`);
+                    const els = domCache.tireElements[id];
                     
-                    if (tempEl) {
-                        tempEl.textContent = Math.round(tire.temp) + '°C';
+                    if (els.temp) {
+                        els.temp.textContent = Math.round(tire.temp) + '°C';
                         // Color code temperature
-                        if (tire.temp < 60) tempEl.style.color = '#4a90e2'; // Cold - blue
-                        else if (tire.temp < 100) tempEl.style.color = '#4ec9b0'; // Optimal - green
-                        else tempEl.style.color = '#f48771'; // Hot - red
+                        if (tire.temp < 60) els.temp.style.color = '#4a90e2'; // Cold - blue
+                        else if (tire.temp < 100) els.temp.style.color = '#4ec9b0'; // Optimal - green
+                        else els.temp.style.color = '#f48771'; // Hot - red
                     }
                     
-                    if (wearEl) {
-                        wearEl.textContent = Math.round(tire.wear * 100) + '%';
+                    if (els.wear) {
+                        els.wear.textContent = Math.round(tire.wear * 100) + '%';
                         // Color code wear
-                        if (tire.wear < 0.5) wearEl.style.color = '#4ec9b0'; // Good - green
-                        else if (tire.wear < 0.8) wearEl.style.color = '#ffa500'; // Worn - orange
-                        else wearEl.style.color = '#f48771'; // Critical - red
+                        if (tire.wear < 0.5) els.wear.style.color = '#4ec9b0'; // Good - green
+                        else if (tire.wear < 0.8) els.wear.style.color = '#ffa500'; // Worn - orange
+                        else els.wear.style.color = '#f48771'; // Critical - red
                     }
                     
-                    if (loadEl) {
-                        loadEl.textContent = Math.round(tire.load) + 'N';
+                    if (els.load) {
+                        els.load.textContent = Math.round(tire.load) + 'N';
                     }
                 });
                 
                 // Update HUD status indicators
-                const tcIndicator = document.getElementById('tc-indicator');
-                const absIndicator = document.getElementById('abs-indicator');
-                const tcStatus = document.getElementById('tc-status');
-                const absStatus = document.getElementById('abs-status');
-                
-                if (tcIndicator) {
-                    tcIndicator.className = car.tractionControl ? 'status-indicator status-on' : 'status-indicator status-off';
-                    tcStatus.textContent = car.tractionControl ? 'ON' : 'OFF';
+                if (domCache.tcIndicator) {
+                    domCache.tcIndicator.className = car.tractionControl ? 'status-indicator status-on' : 'status-indicator status-off';
+                    if (domCache.tcStatus) domCache.tcStatus.textContent = car.tractionControl ? 'ON' : 'OFF';
                 }
                 
-                if (absIndicator) {
-                    absIndicator.className = car.abs ? 'status-indicator status-on' : 'status-indicator status-off';
-                    absStatus.textContent = car.abs ? 'ON' : 'OFF';
+                if (domCache.absIndicator) {
+                    domCache.absIndicator.className = car.abs ? 'status-indicator status-on' : 'status-indicator status-off';
+                    if (domCache.absStatus) domCache.absStatus.textContent = car.abs ? 'ON' : 'OFF';
                 }
                 
                 // Update HUD tire averages
                 const avgTemp = car.tires.reduce((sum, t) => sum + t.temp, 0) / 4;
                 const avgWear = car.tires.reduce((sum, t) => sum + t.wear, 0) / 4;
                 
-                const hudTempEl = document.getElementById('hud-tire-temp');
-                const hudWearEl = document.getElementById('hud-tire-wear');
-                
-                if (hudTempEl) {
-                    hudTempEl.textContent = Math.round(avgTemp) + '°C';
-                    if (avgTemp < 60) hudTempEl.style.color = '#4a90e2';
-                    else if (avgTemp < 100) hudTempEl.style.color = '#4ec9b0';
-                    else hudTempEl.style.color = '#f48771';
+                if (domCache.hudTireTemp) {
+                    domCache.hudTireTemp.textContent = Math.round(avgTemp) + '°C';
+                    if (avgTemp < 60) domCache.hudTireTemp.style.color = '#4a90e2';
+                    else if (avgTemp < 100) domCache.hudTireTemp.style.color = '#4ec9b0';
+                    else domCache.hudTireTemp.style.color = '#f48771';
                 }
                 
-                if (hudWearEl) {
-                    hudWearEl.textContent = Math.round(avgWear * 100) + '%';
-                    if (avgWear < 0.5) hudWearEl.style.color = '#4ec9b0';
-                    else if (avgWear < 0.8) hudWearEl.style.color = '#ffa500';
-                    else hudWearEl.style.color = '#f48771';
+                if (domCache.hudTireWear) {
+                    domCache.hudTireWear.textContent = Math.round(avgWear * 100) + '%';
+                    if (avgWear < 0.5) domCache.hudTireWear.style.color = '#4ec9b0';
+                    else if (avgWear < 0.8) domCache.hudTireWear.style.color = '#ffa500';
+                    else domCache.hudTireWear.style.color = '#f48771';
                 }
                 
                 // Update camera info
-                document.getElementById('cam-zoom').textContent = Math.round(zoomLevel);
-                document.getElementById('cam-angle').textContent = Math.round((cameraAngle * 180 / Math.PI) % 360);
-                document.getElementById('cam-pitch').textContent = Math.round(cameraPitch * 180 / Math.PI);
-                document.getElementById('cam-mode').textContent = cameraFollowCar ? '🎯 Following' : '🔓 Free';
+                if (domCache.camZoom) domCache.camZoom.textContent = Math.round(zoomLevel);
+                if (domCache.camAngle) domCache.camAngle.textContent = Math.round((cameraAngle * 180 / Math.PI) % 360);
+                if (domCache.camPitch) domCache.camPitch.textContent = Math.round(cameraPitch * 180 / Math.PI);
+                if (domCache.camMode) domCache.camMode.textContent = cameraFollowCar ? '🎯 Following' : '🔓 Free';
                 
                 // Update performance stats
-                document.getElementById('draw-calls').textContent = renderer.info.render.calls;
-                document.getElementById('triangles').textContent = (renderer.info.render.triangles / 1000).toFixed(1) + 'K';
+                if (domCache.drawCalls) domCache.drawCalls.textContent = renderer.info.render.calls;
+                if (domCache.triangles) domCache.triangles.textContent = (renderer.info.render.triangles / 1000).toFixed(1) + 'K';
             }
 
-            // Optimized rendering with culling
+            // Render scene
             renderer.render(scene, camera);
             
-            // Optional: Manual garbage collection hint (helps on mobile)
+            // Reset renderer info periodically
             if (frameCount % 300 === 0) {
-                // Every 5 seconds at 60fps
                 renderer.info.reset();
             }
         }
         
-        // Optimize on visibility change (pause when tab hidden)
+        // Pause when tab is hidden
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 paused = true;
@@ -2603,6 +3737,292 @@ car.getSpeed();</textarea>
             const type = document.getElementById('drive-type').value;
             car.driveType = type;
             console.log('✓ Drive type:', type);
+        };
+        
+        // Car model configuration with performance specs
+        // Each car has unique drivetrain characteristics for distinct driving feel
+        const CAR_MODELS = {
+            sports_car: {
+                filename: 'lowpoly_game_model.glb',
+                name: 'Sports Car',
+                scale: 2.5,
+                rotationOffset: -Math.PI / 2,  // -90 degrees
+                // Performance specs - Modern high-performance sports car
+                mass: 1350,           // kg - lightweight sports car
+                enginePower: 220000,  // Watts (220 kW / ~295 HP)
+                maxForwardGear: 7,
+                finalDrive: 3.23,     // Shorter final drive for acceleration
+                gearRatios: {
+                    '-2': -3.8, '-1': -3.0, '0': 0,
+                    '1': 3.82,  // Short 1st for quick launches
+                    '2': 2.36,  // Good acceleration
+                    '3': 1.68,  // Mid-range power
+                    '4': 1.31,  // Balanced
+                    '5': 1.08,  // Highway cruising
+                    '6': 0.88,  // Overdrive
+                    '7': 0.72   // Top speed overdrive
+                },
+                wheelRadius: 0.33,    // 18" performance tires
+                groundClearance: 0.12,
+                defaultTireType: 'sport',
+                defaultDriveType: 'rwd',
+                // Calculated: Top speed ~250 km/h, 0-100 km/h ~5.5s
+                description: '295 HP sports car • 7-speed • Top speed ~250 km/h'
+            },
+            bmw_e30: {
+                filename: 'bmw_e30_1985.glb',
+                name: 'BMW E30 M3 (1985)',
+                scale: 0.0010,        // GLB model is extremely large, scale down drastically
+                rotationOffset: 0,
+                // Performance specs - Legendary E30 M3 (S14 engine)
+                mass: 1165,           // kg - lightweight classic
+                enginePower: 147000,  // Watts (147 kW / ~197 HP - S14 2.3L)
+                maxForwardGear: 5,
+                finalDrive: 3.25,     // E30 M3 final drive
+                gearRatios: {
+                    '-2': -3.5, '-1': -2.9, '0': 0,
+                    '1': 3.72,  // Getrag 265 ratios
+                    '2': 2.40,
+                    '3': 1.77,
+                    '4': 1.26,
+                    '5': 1.00,  // Direct drive
+                    '6': 0, '7': 0  // No 6th/7th gear
+                },
+                wheelRadius: 0.31,    // 15" classic wheels
+                groundClearance: 0.14,
+                defaultTireType: 'sport',
+                defaultDriveType: 'rwd',
+                // Calculated: Top speed ~235 km/h, 0-100 km/h ~6.7s
+                description: '197 HP E30 M3 • 5-speed Getrag • Top speed ~235 km/h'
+            },
+            chevy_c10: {
+                filename: 'chevrolet_c10_pickup_1963.glb',
+                name: 'Chevrolet C10 (1963)',
+                scale: 0.010,         // GLB model is very large, scale down significantly
+                rotationOffset: 0,
+                // Performance specs - Classic American pickup with V8
+                mass: 1950,           // kg - heavy truck
+                enginePower: 168000,  // Watts (168 kW / ~225 HP - 327 V8)
+                maxForwardGear: 4,    // 4-speed Muncie M20
+                finalDrive: 3.73,     // Truck final drive
+                gearRatios: {
+                    '-2': -4.0, '-1': -3.4, '0': 0,
+                    '1': 2.52,  // Muncie M20 wide-ratio
+                    '2': 1.88,  // Good torque multiplication
+                    '3': 1.46,
+                    '4': 1.00,  // Direct drive
+                    '5': 0, '6': 0, '7': 0  // No higher gears
+                },
+                wheelRadius: 0.38,    // 15" truck tires (taller)
+                groundClearance: 0.20,
+                defaultTireType: 'street',
+                defaultDriveType: 'rwd',
+                // Calculated: Top speed ~180 km/h, 0-100 km/h ~9.5s (heavy but torquey)
+                description: '225 HP V8 pickup • 4-speed Muncie • Torquey cruiser'
+            },
+        };
+        
+        let currentCarModel = 'sports_car';
+        let carModelRotationOffset = CAR_MODELS.sports_car.rotationOffset;
+        
+        // Apply car performance specs to physics
+        function applyCarSpecs(modelId) {
+            const specs = CAR_MODELS[modelId];
+            if (!specs) return;
+            
+            // Apply physics properties
+            car.mass = specs.mass;
+            car.enginePower = specs.enginePower;
+            car.maxForwardGear = specs.maxForwardGear;
+            car.finalDrive = specs.finalDrive;
+            car.gearRatios = { ...specs.gearRatios };
+            car.wheelRadius = specs.wheelRadius;
+            car.groundClearance = specs.groundClearance;
+            
+            // Apply default tire and drive type
+            car.tireType = specs.defaultTireType;
+            car.driveType = specs.defaultDriveType;
+            
+            // Update UI dropdowns
+            const tireSelect = document.getElementById('tire-type');
+            const driveSelect = document.getElementById('drive-type');
+            if (tireSelect) tireSelect.value = specs.defaultTireType;
+            if (driveSelect) driveSelect.value = specs.defaultDriveType;
+            
+            // Reset gear to neutral and RPM
+            car.gear = 0;
+            car.engineRPM = 800;
+            
+            // Reset tires for new car
+            car.tires.forEach(tire => {
+                tire.temp = 25;
+                tire.wear = 0;
+            });
+            
+            // Update transmission info display with car details
+            const transInfo = document.getElementById('transmission-info');
+            if (transInfo) {
+                const hp = Math.round(specs.enginePower / 745.7);
+                transInfo.textContent = `🎮 ${specs.maxForwardGear}-Speed Manual: Gears 1-${specs.maxForwardGear} + R1/R2 + N | ${hp} HP ${specs.name}`;
+            }
+            
+            // Calculate and log detailed performance info
+            const topGearRatio = specs.gearRatios[specs.maxForwardGear.toString()];
+            const firstGearRatio = specs.gearRatios['1'];
+            const wheelCirc = 2 * Math.PI * specs.wheelRadius;
+            const redlineRPM = 7200;
+            
+            // Top speed calculation (top gear at redline)
+            const topSpeedMPS = (redlineRPM / (topGearRatio * specs.finalDrive)) * wheelCirc / 60;
+            const topSpeedKPH = topSpeedMPS * 3.6;
+            
+            // First gear max speed (for launch reference)
+            const firstGearMaxMPS = (redlineRPM / (firstGearRatio * specs.finalDrive)) * wheelCirc / 60;
+            const firstGearMaxKPH = firstGearMaxMPS * 3.6;
+            
+            // Power-to-weight ratio
+            const powerToWeight = specs.enginePower / specs.mass; // W/kg
+            const hpPerTon = (specs.enginePower / 745.7) / (specs.mass / 1000); // HP per ton
+            
+            console.log(`✓ Applied ${specs.name} specs:`);
+            console.log(`  Mass: ${specs.mass}kg | Power: ${(specs.enginePower/1000).toFixed(0)}kW (${(specs.enginePower/745.7).toFixed(0)} HP)`);
+            console.log(`  Power/Weight: ${hpPerTon.toFixed(0)} HP/ton | ${specs.maxForwardGear}-speed ${specs.defaultDriveType.toUpperCase()}`);
+            console.log(`  1st gear max: ${firstGearMaxKPH.toFixed(0)} km/h | Top speed: ~${topSpeedKPH.toFixed(0)} km/h`);
+            console.log(`  Final drive: ${specs.finalDrive} | Wheel radius: ${specs.wheelRadius}m`);
+        }
+        
+        window.changeCarModel = () => {
+            const modelId = document.getElementById('car-model').value;
+            const modelConfig = CAR_MODELS[modelId];
+            
+            if (!modelConfig) {
+                console.error('Unknown car model:', modelId);
+                return;
+            }
+            
+            if (!THREE.GLTFLoader) {
+                console.error('GLTFLoader not available');
+                showNotification('❌ Cannot load model - GLTFLoader missing', 'error');
+                return;
+            }
+            
+            console.log('🚗 Loading car model:', modelConfig.name);
+            showNotification(`🚗 Loading ${modelConfig.name}...`, 'info');
+            
+            const loader = new THREE.GLTFLoader();
+            const glbCandidates = [
+                `${assetBase}${modelConfig.filename}`,
+                `./${modelConfig.filename}`,
+                `/preview/${modelConfig.filename}`,
+                `/${modelConfig.filename}`
+            ];
+            
+            const loadGlbWithFallbacks = (urls) => new Promise((resolve, reject) => {
+                const next = urls.shift();
+                if (!next) {
+                    reject(new Error('No GLB sources available'));
+                    return;
+                }
+                
+                loader.load(
+                    next,
+                    (gltf) => resolve({ gltf, url: next }),
+                    undefined,
+                    (error) => {
+                        console.warn(`Failed to load GLB from ${next}:`, error.message || error);
+                        loadGlbWithFallbacks(urls).then(resolve).catch(reject);
+                    }
+                );
+            });
+            
+            loadGlbWithFallbacks(glbCandidates.slice())
+                .then(({ gltf, url }) => {
+                    console.log('✓ Car model loaded from:', url);
+                    
+                    // Remove old car mesh
+                    if (carMesh) {
+                        scene.remove(carMesh);
+                        // Dispose of old geometry and materials
+                        carMesh.traverse((child) => {
+                            if (child.isMesh) {
+                                if (child.geometry) child.geometry.dispose();
+                                if (child.material) {
+                                    if (Array.isArray(child.material)) {
+                                        child.material.forEach(m => m.dispose());
+                                    } else {
+                                        child.material.dispose();
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    
+                    // Set up new car mesh
+                    carMesh = gltf.scene;
+                    carMesh.scale.set(modelConfig.scale, modelConfig.scale, modelConfig.scale);
+                    carModelRotationOffset = modelConfig.rotationOffset;
+                    
+                    // Apply materials and shadows
+                    carMesh.traverse((child) => {
+                        if (child.isMesh) {
+                            // Hide arrow indicators
+                            const isArrowIndicator = child.name && (
+                                child.name.toLowerCase().includes('arrow') ||
+                                child.name.toLowerCase().includes('direction') ||
+                                child.name.toLowerCase().includes('indicator')
+                            );
+                            const isGreenArrow = child.material && child.material.color && 
+                                child.material.color.g > 0.7 && 
+                                child.material.color.r < 0.3 && 
+                                child.material.color.b < 0.3;
+                            
+                            if (isArrowIndicator || isGreenArrow) {
+                                child.visible = false;
+                                return;
+                            }
+                            
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                            
+                            if (child.material) {
+                                child.material.needsUpdate = true;
+                                if (child.material.metalness === undefined) {
+                                    child.material.metalness = 0.3;
+                                    child.material.roughness = 0.7;
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Position at current car location
+                    carMesh.position.set(car.position.x, car.position.y, car.position.z);
+                    carMesh.rotation.y = car.rotation + carModelRotationOffset;
+                    
+                    scene.add(carMesh);
+                    currentCarModel = modelId;
+                    
+                    // Apply car-specific performance specs
+                    applyCarSpecs(modelId);
+                    
+                    console.log('✓ Car model changed to:', modelConfig.name);
+                    
+                    // Calculate and show performance summary
+                    const hp = Math.round(specs.enginePower / 745.7);
+                    const topGearRatio = specs.gearRatios[specs.maxForwardGear.toString()];
+                    const wheelCirc = 2 * Math.PI * specs.wheelRadius;
+                    const topSpeedKPH = Math.round((7200 / (topGearRatio * specs.finalDrive)) * wheelCirc / 60 * 3.6);
+                    
+                    showNotification(`✓ ${modelConfig.name} loaded!`, 'info');
+                    setTimeout(() => {
+                        showNotification(`${hp} HP • ${specs.maxForwardGear}-speed • ~${topSpeedKPH} km/h top`, 'info');
+                    }, 1500);
+                })
+                .catch((error) => {
+                    console.error('Failed to load car model:', error);
+                    showNotification(`❌ Failed to load ${modelConfig.name}`, 'error');
+                    // Revert dropdown to current model
+                    document.getElementById('car-model').value = currentCarModel;
+                });
         };
         
         window.setDownforce = () => {
@@ -2669,15 +4089,26 @@ car.getSpeed();</textarea>
         
         // Global functions
         window.resetCar = () => {
+            // Reset terrain origin to (0,0) area
+            terrain.origin.x = 0;
+            terrain.origin.z = 0;
+            terrain.needsUpdate = true;
+            updateTerrain();
+            
             const terrainHeight = terrain.getHeight(0, 0);
-            const startHeight = terrainHeight + car.groundClearance + 2; // 2 units above ground for gentle drop
+            // Start high above ground for free fall effect
+            const dropHeight = 15; // meters above ground to drop from
+            const startHeight = terrainHeight + car.wheelRadius + car.groundClearance + dropHeight;
             car.position = new Vec3(0, startHeight, 0);
             car.velocity = new Vec3();
-            car.verticalVelocity = 0;
+            car.verticalVelocity = 0; // Start with zero velocity, gravity will accelerate
             car.rotation = 0;
-            car.engineRPM = 1000;
-            car.gear = 1;
-            car.onGround = false;
+            car.engineRPM = 800;
+            car.gear = 0; // Start in Neutral
+            car.onGround = false; // Start airborne for free fall
+            car.airborneTime = 0;
+            car.yawRate = 0;
+            car.lateralVelocity = 0;
             
             // Reset tire data
             car.tires.forEach(tire => {
@@ -2685,9 +4116,18 @@ car.getSpeed();</textarea>
                 tire.wear = 0;
                 tire.load = 0;
                 tire.grip = 1.0;
+                tire.slipRatio = 0;
+                tire.slipAngle = 0;
             });
             
-            console.log('✓ Car reset - Terrain:', terrainHeight.toFixed(2), 'Target:', (terrainHeight + car.groundClearance).toFixed(2), 'Start Y:', startHeight.toFixed(2));
+            // Reset gear shift state
+            if (window.gearShiftState) {
+                window.gearShiftState.upPressed = false;
+                window.gearShiftState.downPressed = false;
+            }
+            
+            console.log('🚀 Car reset with free fall | drop height:', dropHeight + 'm | starting at:', startHeight.toFixed(2) + 'm');
+            showNotification('🚀 Free fall!', 'info');
         };
 
         window.togglePhysics = () => {
@@ -2718,9 +4158,16 @@ car.getSpeed();</textarea>
         setupMobileControls();
 
         window.setTerrain = (type) => {
-            terrain.type = type;
-            terrain.needsUpdate = true;
+            // Use setType method which properly clears cache
+            terrain.setType(type);
             terrain.updateCount = 0; // Reset counter
+            // Trigger a smooth transition when changing terrain type
+            terrain.transitionFramesTotal = 25;
+            terrain.transitionFrames = terrain.transitionFramesTotal;
+            
+            // Reset terrain origin to car position for smooth transition
+            terrain.origin.x = Math.round(car.position.x / terrain.chunkSize) * terrain.chunkSize;
+            terrain.origin.z = Math.round(car.position.z / terrain.chunkSize) * terrain.chunkSize;
             
             // Force immediate terrain update
             updateTerrain();
@@ -2728,11 +4175,11 @@ car.getSpeed();</textarea>
             // Reset car position when terrain changes
             setTimeout(() => {
                 const currentTerrainHeight = terrain.getHeight(car.position.x, car.position.z);
-                const newCarY = currentTerrainHeight + car.groundClearance + 5;
+                const newCarY = currentTerrainHeight + car.wheelRadius + car.groundClearance;
                 car.position.y = newCarY;
                 car.verticalVelocity = 0;
-                car.onGround = false;
-                console.log('✓ Terrain changed to:', type, '| Height:', currentTerrainHeight.toFixed(2), '| Car Y:', newCarY.toFixed(2));
+                car.onGround = true;
+                console.log('✓ Terrain:', type, '| carY:', newCarY.toFixed(2));
                 showNotification('🗺️ Terrain: ' + type.charAt(0).toUpperCase() + type.slice(1), 'info');
             }, 100);
         };
@@ -3614,13 +5061,41 @@ car.getMomentum();`;
         
         // Show welcome notification
         setTimeout(() => {
-            showNotification('🏎️ CarX Simulator v2.2 - Professional Physics Active!', 'info');
+            showNotification('🏎️ CarX Simulator v2.3 - Optimized & Ready!', 'info');
         }, 1000);
 
-        console.log('✓ CarX Simulator v2.2 ready!');
+        console.log('✓ CarX Simulator v2.3 ready!');
         console.log('✓ Professional vehicle dynamics enabled');
         console.log('✓ Pacejka tire model, load transfer, downforce active');
+        console.log('✓ Performance optimizations applied');
         console.log('✓ Use arrow keys to drive, adjust settings in right panel');
+        
+        // Cleanup on page unload to prevent memory leaks
+        window.addEventListener('beforeunload', () => {
+            // Stop animation
+            paused = true;
+            
+            // Dispose of Three.js resources
+            if (renderer) {
+                renderer.dispose();
+                renderer.forceContextLoss();
+            }
+            
+            // Clear vegetation
+            if (typeof clearVegetation === 'function') {
+                clearVegetation();
+            }
+            
+            // Dispose terrain geometry
+            if (terrainGeometry) {
+                terrainGeometry.dispose();
+            }
+            if (terrainMaterial) {
+                terrainMaterial.dispose();
+            }
+            
+            console.log('✓ Resources cleaned up');
+        });
         }
 
         window.whenThreeReady
